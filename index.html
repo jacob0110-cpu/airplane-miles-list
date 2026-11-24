@@ -1,0 +1,2572 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>台灣國籍航空直飛哩程與每週航班查詢系統 | 華航・長榮・星宇</title>
+  <style>
+    :root {
+      --bg-page: #f4f6f9;
+      --bg-card: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
+      --brand-color: #1a3673;
+      --brand-light: #eef2ff;
+      --brand-border: #c7d2fe;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.05);
+    }
+
+    /* 各航空專屬主題色變數 */
+    body[data-airline="CI"] {
+      --brand-color: #1a3673;
+      --brand-light: #eef2ff;
+      --brand-border: #c7d2fe;
+    }
+    body[data-airline="BR"] {
+      --brand-color: #006a4e;
+      --brand-light: #ecfdf5;
+      --brand-border: #a7f3d0;
+    }
+    body[data-airline="JX"] {
+      --brand-color: #8c6d46;
+      --brand-light: #fdf8f3;
+      --brand-border: #e6d5c1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.55;
+      padding: 20px 16px 48px;
+    }
+
+    .container {
+      max-width: 1220px;
+      margin: 0 auto;
+    }
+
+    /* 頁首與主分頁導覽 */
+    header {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 20px 26px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-title h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--brand-color);
+      transition: color 0.25s ease;
+    }
+
+    .header-title p {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+
+    .main-nav-tabs {
+      display: inline-flex;
+      background: #f1f5f9;
+      padding: 5px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      gap: 4px;
+    }
+
+    .nav-tab-btn {
+      padding: 9px 18px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-tab-btn.active {
+      background: var(--brand-color);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+
+    /* 共用控制面板 */
+    .control-panel {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 20px 26px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: 1.2fr 1.6fr 0.95fr;
+      gap: 18px;
+      align-items: end;
+    }
+
+    @media (max-width: 920px) {
+      .control-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 7px;
+      letter-spacing: 0.4px;
+    }
+
+    /* 航空公司切換鈕 */
+    .airline-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .airline-btn {
+      padding: 9px 6px;
+      border: 1.5px solid var(--border-color);
+      background: #fff;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .airline-btn small {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .airline-btn:hover {
+      border-color: var(--brand-color);
+    }
+
+    .airline-btn.active {
+      background: var(--brand-color);
+      border-color: var(--brand-color);
+      color: #fff;
+    }
+
+    .airline-btn.active small {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    /* 航線搜尋與選擇 */
+    .route-selector-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .search-input-box {
+      position: relative;
+    }
+
+    .search-input-box input {
+      width: 100%;
+      padding: 8px 32px 8px 12px;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input-box input:focus {
+      border-color: var(--brand-color);
+    }
+
+    .clear-search {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    select#routeSelect {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 0.93rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      background-color: #fff;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select#routeSelect:focus {
+      border-color: var(--brand-color);
+    }
+
+    /* 右側動態控制區 */
+    .trip-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+
+    .trip-btn {
+      padding: 8px 10px;
+      border: none;
+      background: transparent;
+      border-radius: 7px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .trip-btn.active {
+      background: #fff;
+      color: var(--brand-color);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    /* 星期篩選按鈕列 */
+    .day-filter-bar {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .day-filter-btn {
+      flex: 1;
+      min-width: 34px;
+      padding: 8px 4px;
+      border: 1.5px solid var(--border-color);
+      background: #fff;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .day-filter-btn:hover {
+      border-color: var(--brand-color);
+      color: var(--brand-color);
+    }
+
+    .day-filter-btn.active {
+      background: var(--brand-color);
+      border-color: var(--brand-color);
+      color: #fff;
+    }
+
+    /* 分頁顯示控制 */
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+
+    /* 摘要資訊列 */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 768px) {
+      .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 15px 18px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 1.24rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-card .stat-value.highlight {
+      color: var(--brand-color);
+    }
+
+    .stat-card .stat-sub {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+
+    /* 卡片容器 */
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .card-header h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 哩程頁面雙欄排版 */
+    .miles-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .miles-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* 客艙篩選膠囊 */
+    .cabin-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .filter-pill {
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .filter-pill:hover {
+      border-color: var(--brand-color);
+      color: var(--brand-color);
+    }
+
+    .filter-pill.active {
+      background: var(--brand-color);
+      border-color: var(--brand-color);
+      color: #fff;
+    }
+
+    .pill-sub-tag {
+      font-size: 0.68rem;
+      padding: 0 5px;
+      border-radius: 4px;
+      background: rgba(100, 116, 139, 0.14);
+      color: inherit;
+    }
+
+    .filter-pill.active .pill-sub-tag {
+      background: rgba(255, 255, 255, 0.24);
+    }
+
+    /* 硬體規格篩選工具列（時刻表分頁專用） */
+    .hardware-filter-bar {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 16px 22px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .hw-filter-groups {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .hw-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hw-group-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .route-note-banner {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.84rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* 視覺化長條圖 */
+    .chart-list {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .chart-row {
+      padding: 7px 10px;
+      border-radius: 8px;
+      transition: background-color 0.15s;
+    }
+
+    .chart-row:hover, .chart-row.hovered {
+      background-color: var(--brand-light);
+    }
+
+    .chart-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.84rem;
+      margin-bottom: 5px;
+    }
+
+    .chart-meta-left {
+      font-weight: 600;
+    }
+
+    .rbd-tag {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #334155;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .chart-meta-right {
+      font-weight: 700;
+      color: var(--brand-color);
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 9px;
+      background: #f1f5f9;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: var(--brand-color);
+      border-radius: 999px;
+      transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.25s;
+    }
+
+    .bar-fill.zero {
+      background: #cbd5e1;
+    }
+
+    /* 明細表格 */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 8px;
+      background: #f8fafc;
+      color: var(--text-secondary);
+      font-weight: 700;
+      font-size: 0.77rem;
+      border-bottom: 1.5px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    th.num, td.num {
+      text-align: right;
+    }
+
+    td {
+      padding: 11px 8px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      transition: background-color 0.15s;
+    }
+
+    tbody tr:hover, tbody tr.hovered {
+      background-color: var(--brand-light);
+    }
+
+    .cabin-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .cabin-first { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .cabin-biz { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    .cabin-pe { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .cabin-eco { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+    .miles-num {
+      font-weight: 700;
+      font-size: 0.98rem;
+      color: var(--brand-color);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .miles-zero {
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .action-btn {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--brand-color);
+      background: var(--brand-light);
+      border: 1px solid var(--brand-border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .action-btn:hover {
+      background: var(--brand-color);
+      color: #fff;
+    }
+
+    .reset-btn {
+      padding: 5px 11px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #dc2626;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .reset-btn:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+
+    /* 航班時刻表雙欄佈局 */
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 1024px) {
+      .schedule-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dir-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      background: var(--brand-light);
+      color: var(--brand-color);
+      border: 1px solid var(--brand-border);
+    }
+
+    .flight-no {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 800;
+      font-size: 0.94rem;
+      color: var(--brand-color);
+      white-space: nowrap;
+    }
+
+    .time-block {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .time-val {
+      font-weight: 700;
+      font-size: 0.94rem;
+      color: var(--text-primary);
+    }
+
+    .next-day-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #dc2626;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      padding: 0 4px;
+      border-radius: 4px;
+    }
+
+    /* 機型與配備艙等群組 */
+    .aircraft-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .aircraft-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .cabin-pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+
+    .mini-cabin {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    /* 每週一～日圓點視覺化 */
+    .week-dots {
+      display: inline-flex;
+      gap: 3px;
+    }
+
+    .day-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #cbd5e1;
+    }
+
+    .day-dot.active {
+      background: var(--brand-color);
+      color: #fff;
+    }
+
+    .day-dot.highlight-day {
+      box-shadow: 0 0 0 2px #f59e0b;
+    }
+
+    .empty-schedule {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .footer-note {
+      margin-top: 20px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      background: #fff;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body data-airline="BR">
+  <div class="container">
+    <!-- 頁首與雙分頁切換 -->
+    <header>
+      <div class="header-title">
+        <h1>✈️ 台灣國籍航空直飛查詢系統</h1>
+        <p>中華航空 (CI) ・ 長榮航空 (BR) ・ 星宇航空 (JX) 直飛哩程與每週航班時刻</p>
+      </div>
+
+      <nav class="main-nav-tabs" id="mainNavTabs">
+        <button class="nav-tab-btn" data-tab="miles">
+          📊 艙等哩程試算
+        </button>
+        <button class="nav-tab-btn active" data-tab="schedule">
+          🕒 每週航班時刻表
+        </button>
+      </nav>
+    </header>
+
+    <!-- 共用控制面板 -->
+    <section class="control-panel">
+      <div class="control-group">
+        <label>1. 選擇國籍航空</label>
+        <div class="airline-tabs" id="airlineTabs">
+          <button class="airline-btn" data-code="CI">
+            中華航空
+            <small>China Airlines</small>
+          </button>
+          <button class="airline-btn active" data-code="BR">
+            長榮航空
+            <small>EVA Air</small>
+          </button>
+          <button class="airline-btn" data-code="JX">
+            星宇航空
+            <small>STARLUX</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="routeSelect">2. 搜尋並選擇直飛航線（<span id="routeCount">0</span> 條可用航線）</label>
+        <div class="route-selector-wrap">
+          <div class="search-input-box">
+            <input
+              type="text"
+              id="routeSearch"
+              placeholder="輸入城市或機場代碼搜尋（例如：慕尼黑、MUC、東京、NRT、洛杉磯）..."
+              autocomplete="off"
+            />
+            <button class="clear-search" id="clearSearchBtn" title="清除搜尋">✕</button>
+          </div>
+          <select id="routeSelect"></select>
+        </div>
+      </div>
+
+      <!-- 動態控制欄：哩程分頁顯示來回切換 / 航班分頁顯示飛航日篩選 -->
+      <div class="control-group" id="milesRightControl" style="display: none;">
+        <label>3. 行程方向</label>
+        <div class="trip-toggle" id="tripToggle">
+          <button class="trip-btn active" data-mult="2">來回 (×2)</button>
+          <button class="trip-btn" data-mult="1">單程 (×1)</button>
+        </div>
+      </div>
+
+      <div class="control-group" id="scheduleRightControl">
+        <label>3. 篩選每週執飛日（全週或指定星期）</label>
+        <div class="day-filter-bar" id="dayFilterBar">
+          <button class="day-filter-btn active" data-day="ALL">全週</button>
+          <button class="day-filter-btn" data-day="1">一</button>
+          <button class="day-filter-btn" data-day="2">二</button>
+          <button class="day-filter-btn" data-day="3">三</button>
+          <button class="day-filter-btn" data-day="4">四</button>
+          <button class="day-filter-btn" data-day="5">五</button>
+          <button class="day-filter-btn" data-day="6">六</button>
+          <button class="day-filter-btn" data-day="7">日</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 分頁 1：艙等哩程試算 ==================== -->
+    <div id="tab-miles" class="tab-pane">
+      <section class="summary-grid">
+        <div class="stat-card">
+          <div class="stat-label">所選直飛航線</div>
+          <div class="stat-value" id="statRouteTitle" style="font-size: 1.08rem;">—</div>
+          <div class="stat-sub" id="statRegion">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">單程基本飛行哩程 (TPM)</div>
+          <div class="stat-value" id="statBaseTpm">0 哩</div>
+          <div class="stat-sub">IATA 標準計算基準</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">100% 基準累積哩程</div>
+          <div class="stat-value highlight" id="statStandardMiles">0 哩</div>
+          <div class="stat-sub" id="statTripLabel">來回全額經濟艙基準</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">最高可累積哩程</div>
+          <div class="stat-value highlight" id="statMaxMiles">0 哩</div>
+          <div class="stat-sub" id="statMaxTier">—</div>
+        </div>
+      </section>
+
+      <section class="miles-grid">
+        <div class="card">
+          <div class="card-header">
+            <h2>📊 各艙等累積哩程對比</h2>
+            <button class="action-btn" id="jumpToScheduleBtn">查看航班時刻與機型艙等 →</button>
+          </div>
+          <div class="chart-list" id="chartContainer"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>📋 子艙等累積明細列表</h2>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <div class="cabin-filters" id="cabinFilters">
+                <button class="filter-pill active" data-cabin="ALL">全部</button>
+                <button class="filter-pill" data-cabin="PREMIUM">頭等/商務</button>
+                <button class="filter-pill" data-cabin="PE">豪經艙</button>
+                <button class="filter-pill" data-cabin="ECO">經濟艙</button>
+              </div>
+              <button class="action-btn" id="copyMilesBtn">複製哩程表</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>客艙等級</th>
+                  <th>票價產品</th>
+                  <th>訂位代碼</th>
+                  <th class="num">累積比例</th>
+                  <th class="num" id="tableMilesHeader">來回可累積哩程</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== 分頁 2：每週航班時刻表 ==================== -->
+    <div id="tab-schedule" class="tab-pane active">
+      <section class="summary-grid">
+        <div class="stat-card">
+          <div class="stat-label">查詢航線與執飛航空</div>
+          <div class="stat-value" id="schedRouteTitle" style="font-size: 1.08rem;">—</div>
+          <div class="stat-sub" id="schedAirlineSub">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">去程每週符合班次</div>
+          <div class="stat-value highlight" id="schedOutFreq">0 班 / 週</div>
+          <div class="stat-sub" id="schedOutFlightCount">共 0 個定期航班號</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">回程每週符合班次</div>
+          <div class="stat-value highlight" id="schedInFreq">0 班 / 週</div>
+          <div class="stat-sub" id="schedInFlightCount">共 0 個定期航班號</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">執飛機型與提供艙等</div>
+          <div class="stat-value" id="schedAircraftSummary" style="font-size: 1.02rem;">—</div>
+          <div class="stat-sub" id="schedCabinSummary">—</div>
+        </div>
+      </section>
+
+      <!-- 新增：依機型與配備艙等雙重篩選工具列 -->
+      <section class="hardware-filter-bar">
+        <div class="hw-filter-groups">
+          <div class="hw-group">
+            <span class="hw-group-title">💺 配備客艙篩選：</span>
+            <div class="cabin-filters" id="schedCabinFilterBar">
+              <button class="filter-pill active" data-hwcabin="ALL">全部航班</button>
+              <button class="filter-pill" data-hwcabin="FIRST">配備頭等艙</button>
+              <button class="filter-pill" data-hwcabin="PE">配備豪華經濟艙</button>
+              <button class="filter-pill" data-hwcabin="TWO_CLASS">僅兩艙等（無豪經艙）</button>
+            </div>
+          </div>
+
+          <div class="hw-group">
+            <span class="hw-group-title">🛩️ 執飛機型：</span>
+            <div class="cabin-filters" id="schedAircraftFilterBar"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button class="reset-btn" id="resetSchedFiltersBtn" style="display: none;">重設篩選條件</button>
+          <button class="action-btn" id="jumpToMilesBtn">← 試算此航線哩程</button>
+          <button class="action-btn" id="copyScheduleBtn">複製班表</button>
+        </div>
+      </section>
+
+      <!-- 航線特別提示（如中停同機直飛） -->
+      <div class="route-note-banner" id="routeNoteBanner"></div>
+
+      <section class="schedule-grid">
+        <!-- 去程卡片 -->
+        <div class="card">
+          <div class="card-header">
+            <h2>
+              <span class="dir-badge">去程 OUTBOUND</span>
+              <span id="outboundHeaderTitle">台灣 → 目的地</span>
+            </h2>
+            <span style="font-size: 0.78rem; color: var(--text-secondary);">當地起降時間</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>航班</th>
+                  <th>出發 / 抵達</th>
+                  <th>執飛機型與配備艙等</th>
+                  <th>每週飛航日</th>
+                </tr>
+              </thead>
+              <tbody id="outboundTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 回程卡片 -->
+        <div class="card">
+          <div class="card-header">
+            <h2>
+              <span class="dir-badge">回程 INBOUND</span>
+              <span id="inboundHeaderTitle">目的地 → 台灣</span>
+            </h2>
+            <span style="font-size: 0.78rem; color: var(--text-secondary);">當地起降時間</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>航班</th>
+                  <th>出發 / 抵達</th>
+                  <th>執飛機型與配備艙等</th>
+                  <th>每週飛航日</th>
+                </tr>
+              </thead>
+              <tbody id="inboundTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer-note">
+      <strong>資料基準與注意事項：</strong><br />
+      1. <strong>機型與客艙配置</strong>：依各國籍航空主力機隊客艙規格標示（長榮 <code>B777-300ER</code> 與 <code>B787-9</code>（豪華經濟艙僅部分機隊配備，依長榮官網）配備皇璽桂冠艙、豪華經濟艙、經濟艙；<code>B787-10</code> 與 <code>A330-300</code> 為兩艙等；華航 <code>B777-300ER</code> 與 <code>A350-900</code> 配備三艙等；星宇 <code>A350-900</code> 配備四艙等），實際派飛機型可能隨季節性調度微調。<br />
+      2. <strong>航班時刻與哩程</strong>：時刻均為起飛／降落當地時間（<code>+1</code> 表示跨日抵達）；哩程依原購票子艙等累積比例計算，酬賓免費機票不累積哩程。
+    </div>
+  </div>
+
+  <script>
+    // 1. 三大國籍航空子艙等累積資料庫
+    const AIRLINES = {
+      CI: {
+        code: "CI",
+        name: "中華航空",
+        program: "Dynasty Flyer 華夏哩程酬賓計畫",
+        tiers: [
+          { group: "PREMIUM", cabin: "商務艙", badge: "cabin-biz", fare: "尊爵 / 靈活", rbd: "J", ratio: 1.75 },
+          { group: "PREMIUM", cabin: "商務艙", badge: "cabin-biz", fare: "標準", rbd: "C", ratio: 1.50 },
+          { group: "PREMIUM", cabin: "商務艙", badge: "cabin-biz", fare: "基本 / 精緻", rbd: "D", ratio: 1.25 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "尊爵 / 靈活", rbd: "W / U", ratio: 1.25 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "標準", rbd: "A", ratio: 1.15 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "基本 / 精緻", rbd: "E", ratio: 1.00 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "尊爵 / 靈活", rbd: "Y / B / M", ratio: 1.00 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "標準", rbd: "K / V / T", ratio: 0.80 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "基本 / 樂活", rbd: "R / Q / H / N", ratio: 0.50 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "特惠 / 輕省", rbd: "L", ratio: 0.00 }
+        ]
+      },
+      BR: {
+        code: "BR",
+        name: "長榮航空",
+        program: "Infinity MileageLands 無限萬哩遊",
+        tiers: [
+          { group: "PREMIUM", cabin: "皇璽桂冠/商務", badge: "cabin-biz", fare: "尊寵 (Up)", rbd: "C", ratio: 1.75 },
+          { group: "PREMIUM", cabin: "皇璽桂冠/商務", badge: "cabin-biz", fare: "經典 (Standard)", rbd: "J", ratio: 1.50 },
+          { group: "PREMIUM", cabin: "皇璽桂冠/商務", badge: "cabin-biz", fare: "基本 (Basic)", rbd: "D", ratio: 1.25 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "尊寵 (Up)", rbd: "K", ratio: 1.25 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "經典 (Standard)", rbd: "L / T", ratio: 1.15 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "基本 (Basic)", rbd: "P", ratio: 1.00 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "尊寵 (Up)", rbd: "Y / B", ratio: 1.00 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "經典 (Standard)", rbd: "M / H / Q", ratio: 0.75 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "基本 (Basic)", rbd: "S / W / V", ratio: 0.50 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "輕省 (Discount)", rbd: "A", ratio: 0.00 }
+        ]
+      },
+      JX: {
+        code: "JX",
+        name: "星宇航空",
+        program: "COSMILE 酬賓計畫",
+        tiers: [
+          { group: "PREMIUM", cabin: "頭等艙", badge: "cabin-first", fare: "全額 (Full)", rbd: "F / A", ratio: 2.00 },
+          { group: "PREMIUM", cabin: "商務艙", badge: "cabin-biz", fare: "全額 (Full)", rbd: "J", ratio: 1.75 },
+          { group: "PREMIUM", cabin: "商務艙", badge: "cabin-biz", fare: "基本 (Basic)", rbd: "C", ratio: 1.50 },
+          { group: "PREMIUM", cabin: "商務艙", badge: "cabin-biz", fare: "超值 (Saving)", rbd: "D", ratio: 1.30 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "全額 (Full)", rbd: "W", ratio: 1.25 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "基本 (Basic)", rbd: "R", ratio: 1.15 },
+          { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "超值 (Saving)", rbd: "E", ratio: 1.05 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "全額 (Full)", rbd: "Y / B / H", ratio: 1.00 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "基本 (Basic)", rbd: "K / M / L", ratio: 0.80 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "超值 (Saving)", rbd: "V / S / N", ratio: 0.60 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "限量 (Limited)", rbd: "Q", ratio: 0.00 }
+        ]
+      }
+    };
+
+    // 2. 國籍航空各機型實際配備客艙對照表（含 tierKey 供篩選比對）
+    const AIRCRAFT_CABINS = {
+      CI: {
+        "B777-300ER": [
+          { key: "BIZ", name: "豪華商務艙", cls: "cabin-biz" },
+          { key: "PE", name: "豪華經濟艙", cls: "cabin-pe" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "A350-900": [
+          { key: "BIZ", name: "豪華商務艙", cls: "cabin-biz" },
+          { key: "PE", name: "豪華經濟艙", cls: "cabin-pe" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "A330-300": [
+          { key: "BIZ", name: "商務艙", cls: "cabin-biz" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "A321neo": [
+          { key: "BIZ", name: "豪華商務艙", cls: "cabin-biz" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "B737-800": [
+          { key: "BIZ", name: "商務艙", cls: "cabin-biz" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ]
+      },
+      BR: {
+        "B777-300ER": [
+          { key: "BIZ", name: "皇璽桂冠艙", cls: "cabin-biz" },
+          { key: "PE", name: "豪華經濟艙", cls: "cabin-pe" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "B787-9": [
+          { key: "BIZ", name: "皇璽桂冠艙", cls: "cabin-biz" },
+          { key: "PE", name: "豪華經濟艙", cls: "cabin-pe" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "B787-10": [
+          { key: "BIZ", name: "皇璽桂冠艙", cls: "cabin-biz" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "A330-300": [
+          { key: "BIZ", name: "桂冠艙", cls: "cabin-biz" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "A321-200": [
+          { key: "BIZ", name: "商務艙", cls: "cabin-biz" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ]
+      },
+      JX: {
+        "A350-900": [
+          { key: "FIRST", name: "頭等艙", cls: "cabin-first" },
+          { key: "BIZ", name: "商務艙", cls: "cabin-biz" },
+          { key: "PE", name: "豪華經濟艙", cls: "cabin-pe" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "A330neo": [
+          { key: "BIZ", name: "商務艙", cls: "cabin-biz" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ],
+        "A321neo": [
+          { key: "BIZ", name: "商務艙", cls: "cabin-biz" },
+          { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+        ]
+      }
+    };
+
+    // 3. 全面校正後之 43 條國籍航空直飛航線與每週航班時刻資料庫
+    const DAILY = Object.freeze([1, 2, 3, 4, 5, 6, 7]);
+
+    const ROUTES = [
+      // ==================== 東北亞 (16條) ====================
+      {
+        id: "TPE-NRT", region: "東北亞", origin: "台北桃園 (TPE)", dest: "東京成田 (NRT)", tpm: 1356,
+        carriers: ["CI", "BR", "JX"], keywords: "tokyo narita 日本 東京",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 100", dep: "08:55", arr: "13:15", aircraft: "A350-900", days: DAILY },
+              { no: "CI 104", dep: "12:35", arr: "16:55", aircraft: "A330-300", days: DAILY },
+              { no: "CI 108", dep: "14:40", arr: "19:00", aircraft: "A321neo", days: DAILY },
+              { no: "CI 106", dep: "16:35", arr: "20:55", aircraft: "B777-300ER", days: [1, 3, 5, 7] }
+            ],
+            in: [
+              { no: "CI 107", dep: "09:25", arr: "12:15", aircraft: "B777-300ER", days: [1, 2, 4, 6] },
+              { no: "CI 101", dep: "14:30", arr: "17:15", aircraft: "A350-900", days: DAILY },
+              { no: "CI 105", dep: "17:55", arr: "20:45", aircraft: "A330-300", days: DAILY },
+              { no: "CI 109", dep: "20:00", arr: "22:50", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 184", dep: "07:55", arr: "12:25", aircraft: "B787-9", days: DAILY },
+              { no: "BR 198", dep: "08:50", arr: "13:15", aircraft: "B787-10", days: DAILY },
+              { no: "BR 196", dep: "15:20", arr: "19:40", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 183", dep: "13:25", arr: "16:05", aircraft: "B787-9", days: DAILY },
+              { no: "BR 197", dep: "14:15", arr: "16:55", aircraft: "B787-10", days: DAILY },
+              { no: "BR 195", dep: "20:40", arr: "23:25", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 800", dep: "08:30", arr: "12:45", aircraft: "A350-900", days: DAILY },
+              { no: "JX 802", dep: "10:10", arr: "14:25", aircraft: "A330neo", days: DAILY },
+              { no: "JX 804", dep: "15:00", arr: "19:20", aircraft: "A330neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 801", dep: "13:55", arr: "16:35", aircraft: "A350-900", days: DAILY },
+              { no: "JX 803", dep: "15:40", arr: "18:20", aircraft: "A330neo", days: DAILY },
+              { no: "JX 805", dep: "20:35", arr: "23:20", aircraft: "A330neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TSA-HND", region: "東北亞", origin: "台北松山 (TSA)", dest: "東京羽田 (HND)", tpm: 1330,
+        carriers: ["CI", "BR"], keywords: "tokyo haneda 日本 東京 松山",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 220", dep: "09:00", arr: "13:05", aircraft: "A330-300", days: DAILY },
+              { no: "CI 222", dep: "18:05", arr: "22:05", aircraft: "A330-300", days: DAILY }
+            ],
+            in: [
+              { no: "CI 223", dep: "07:55", arr: "10:40", aircraft: "A330-300", days: DAILY },
+              { no: "CI 221", dep: "14:15", arr: "17:00", aircraft: "A330-300", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 192", dep: "07:30", arr: "11:45", aircraft: "B787-10", days: DAILY },
+              { no: "BR 190", dep: "16:00", arr: "20:15", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 189", dep: "12:45", arr: "15:30", aircraft: "B787-10", days: DAILY },
+              { no: "BR 191", dep: "21:15", arr: "23:55", aircraft: "B787-10", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "KHH-NRT", region: "東北亞", origin: "高雄小港 (KHH)", dest: "東京成田 (NRT)", tpm: 1528,
+        carriers: ["CI", "BR"], keywords: "kaohsiung tokyo narita 高雄 東京",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 102", dep: "08:00", arr: "12:30", aircraft: "B737-800", days: DAILY },
+              { no: "CI 126", dep: "13:10", arr: "17:40", aircraft: "A321neo", days: [2, 4, 6, 7] }
+            ],
+            in: [
+              { no: "CI 103", dep: "13:30", arr: "16:40", aircraft: "B737-800", days: DAILY },
+              { no: "CI 127", dep: "18:40", arr: "21:50", aircraft: "A321neo", days: [2, 4, 6, 7] }
+            ]
+          },
+          BR: {
+            out: [{ no: "BR 108", dep: "07:00", arr: "11:30", aircraft: "A321-200", days: DAILY }],
+            in: [{ no: "BR 107", dep: "12:30", arr: "15:40", aircraft: "A321-200", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-KIX", region: "東北亞", origin: "台北桃園 (TPE)", dest: "大阪關西 (KIX)", tpm: 1060,
+        carriers: ["CI", "BR", "JX"], keywords: "osaka kansai 日本 大阪",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 156", dep: "08:10", arr: "11:45", aircraft: "A350-900", days: DAILY },
+              { no: "CI 152", dep: "09:45", arr: "13:20", aircraft: "A330-300", days: DAILY },
+              { no: "CI 172", dep: "14:20", arr: "17:55", aircraft: "A330-300", days: DAILY }
+            ],
+            in: [
+              { no: "CI 157", dep: "12:55", arr: "15:00", aircraft: "A350-900", days: DAILY },
+              { no: "CI 153", dep: "14:30", arr: "16:35", aircraft: "A330-300", days: DAILY },
+              { no: "CI 173", dep: "19:00", arr: "21:05", aircraft: "A330-300", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 178", dep: "06:30", arr: "10:10", aircraft: "B787-10", days: DAILY },
+              { no: "BR 132", dep: "08:30", arr: "12:10", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 130", dep: "13:35", arr: "17:15", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 177", dep: "11:10", arr: "13:15", aircraft: "B787-10", days: DAILY },
+              { no: "BR 131", dep: "13:10", arr: "15:15", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 129", dep: "18:30", arr: "20:35", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 820", dep: "08:30", arr: "12:00", aircraft: "A330neo", days: DAILY },
+              { no: "JX 822", dep: "10:25", arr: "14:00", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 821", dep: "13:10", arr: "15:15", aircraft: "A330neo", days: DAILY },
+              { no: "JX 823", dep: "15:10", arr: "17:15", aircraft: "A321neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-FUK", region: "東北亞", origin: "台北桃園 (TPE)", dest: "福岡 (FUK)", tpm: 806,
+        carriers: ["CI", "BR", "JX"], keywords: "fukuoka kyushu 日本 九州 福岡",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 110", dep: "06:50", arr: "10:00", aircraft: "A350-900", days: DAILY },
+              { no: "CI 116", dep: "16:25", arr: "19:35", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 111", dep: "11:00", arr: "12:30", aircraft: "A350-900", days: DAILY },
+              { no: "CI 117", dep: "20:35", arr: "22:05", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 106", dep: "08:10", arr: "11:20", aircraft: "B787-10", days: DAILY },
+              { no: "BR 102", dep: "15:10", arr: "18:20", aircraft: "A321-200", days: DAILY }
+            ],
+            in: [
+              { no: "BR 105", dep: "12:20", arr: "13:50", aircraft: "B787-10", days: DAILY },
+              { no: "BR 101", dep: "19:20", arr: "20:50", aircraft: "A321-200", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 840", dep: "10:30", arr: "13:45", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 841", dep: "14:45", arr: "16:15", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-OKA", region: "東北亞", origin: "台北桃園 (TPE)", dest: "沖繩那霸 (OKA)", tpm: 406,
+        carriers: ["CI", "BR", "JX"], keywords: "okinawa naha 日本 沖繩",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 120", dep: "08:15", arr: "10:45", aircraft: "A330-300", days: DAILY },
+              { no: "CI 122", dep: "17:05", arr: "19:35", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 121", dep: "11:50", arr: "12:25", aircraft: "A330-300", days: DAILY },
+              { no: "CI 123", dep: "20:35", arr: "21:10", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 112", dep: "06:45", arr: "09:15", aircraft: "A321-200", days: DAILY },
+              { no: "BR 186", dep: "16:50", arr: "19:20", aircraft: "A321-200", days: DAILY }
+            ],
+            in: [
+              { no: "BR 113", dep: "10:15", arr: "10:50", aircraft: "A321-200", days: DAILY },
+              { no: "BR 185", dep: "20:20", arr: "20:55", aircraft: "A321-200", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 870", dep: "12:20", arr: "14:50", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 871", dep: "15:50", arr: "16:25", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-CTS", region: "東北亞", origin: "台北桃園 (TPE)", dest: "札幌新千歲 (CTS)", tpm: 1692,
+        carriers: ["CI", "BR", "JX"], keywords: "sapporo hokkaido 日本 北海道 札幌",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 130", dep: "08:35", arr: "13:15", aircraft: "A330-300", days: DAILY }],
+            in: [{ no: "CI 131", dep: "14:40", arr: "18:05", aircraft: "A330-300", days: DAILY }]
+          },
+          BR: {
+            out: [
+              { no: "BR 166", dep: "07:00", arr: "11:40", aircraft: "A330-300", days: [1, 3, 5, 7] },
+              { no: "BR 116", dep: "09:30", arr: "14:05", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 165", dep: "12:50", arr: "16:15", aircraft: "A330-300", days: [1, 3, 5, 7] },
+              { no: "BR 115", dep: "15:20", arr: "18:45", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 850", dep: "09:25", arr: "14:10", aircraft: "A330neo", days: DAILY }],
+            in: [{ no: "JX 851", dep: "15:20", arr: "18:50", aircraft: "A330neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-NGO", region: "東北亞", origin: "台北桃園 (TPE)", dest: "名古屋中部 (NGO)", tpm: 1152,
+        carriers: ["CI", "JX"], keywords: "nagoya 日本 名古屋",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 154", dep: "07:30", arr: "11:05", aircraft: "A321neo", days: DAILY },
+              { no: "CI 150", dep: "17:15", arr: "20:50", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 151", dep: "09:50", arr: "12:00", aircraft: "A321neo", days: DAILY },
+              { no: "CI 155", dep: "12:05", arr: "14:15", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 838", dep: "14:40", arr: "18:15", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 839", dep: "19:15", arr: "21:30", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-SDJ", region: "東北亞", origin: "台北桃園 (TPE)", dest: "仙台 (SDJ)", tpm: 1518,
+        carriers: ["BR", "JX"], keywords: "sendai tohoku 日本 東北 仙台",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 118", dep: "10:05", arr: "14:25", aircraft: "A321-200", days: DAILY }],
+            in: [{ no: "BR 117", dep: "15:30", arr: "18:40", aircraft: "A321-200", days: DAILY }]
+          },
+          JX: {
+            out: [{ no: "JX 862", dep: "11:40", arr: "16:00", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 863", dep: "17:15", arr: "20:20", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-KMJ", region: "東北亞", origin: "台北桃園 (TPE)", dest: "熊本 (KMJ)", tpm: 825,
+        carriers: ["CI", "JX"], keywords: "kumamoto kyushu 日本 九州 熊本",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 194", dep: "14:30", arr: "17:40", aircraft: "A321neo", days: [1, 2, 4, 5, 7] }],
+            in: [{ no: "CI 195", dep: "18:40", arr: "20:10", aircraft: "A321neo", days: [1, 2, 4, 5, 7] }]
+          },
+          JX: {
+            out: [{ no: "JX 846", dep: "09:45", arr: "13:00", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 847", dep: "14:00", arr: "15:30", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-HKD", region: "東北亞", origin: "台北桃園 (TPE)", dest: "函館 (HKD)", tpm: 1632,
+        carriers: ["BR", "JX"], keywords: "hakodate hokkaido 日本 北海道 函館",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 138", dep: "10:00", arr: "14:30", aircraft: "A321-200", days: DAILY }],
+            in: [{ no: "BR 137", dep: "15:35", arr: "19:00", aircraft: "A321-200", days: DAILY }]
+          },
+          JX: {
+            out: [{ no: "JX 860", dep: "11:30", arr: "16:00", aircraft: "A321neo", days: [1, 3, 5, 7] }],
+            in: [{ no: "JX 861", dep: "17:10", arr: "20:35", aircraft: "A321neo", days: [1, 3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-KMQ", region: "東北亞", origin: "台北桃園 (TPE)", dest: "小松 / 金澤 (KMQ)", tpm: 1185,
+        carriers: ["BR"], keywords: "komatsu kanazawa 日本 北陸 小松 金澤",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 158", dep: "06:35", arr: "10:25", aircraft: "A321-200", days: DAILY }],
+            in: [{ no: "BR 157", dep: "11:45", arr: "14:00", aircraft: "A321-200", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-HIJ", region: "東北亞", origin: "台北桃園 (TPE)", dest: "廣島 (HIJ)", tpm: 922,
+        carriers: ["CI"], keywords: "hiroshima 日本 廣島",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 112", dep: "07:00", arr: "10:20", aircraft: "A321neo", days: [2, 3, 5, 6] }],
+            in: [{ no: "CI 113", dep: "11:20", arr: "13:05", aircraft: "A321neo", days: [2, 3, 5, 6] }]
+          }
+        }
+      },
+      {
+        id: "TPE-TAK", region: "東北亞", origin: "台北桃園 (TPE)", dest: "高松 (TAK)", tpm: 1012,
+        carriers: ["CI"], keywords: "takamatsu shikoku 日本 四國 高松",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 178", dep: "14:30", arr: "18:05", aircraft: "A321neo", days: [2, 3, 4, 6, 7] }],
+            in: [{ no: "CI 179", dep: "19:05", arr: "21:05", aircraft: "A321neo", days: [2, 3, 4, 6, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-ICN", region: "東北亞", origin: "台北桃園 (TPE)", dest: "首爾仁川 (ICN)", tpm: 907,
+        carriers: ["CI", "BR"], keywords: "seoul incheon 韓國 首爾",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 160", dep: "07:45", arr: "11:15", aircraft: "A330-300", days: DAILY },
+              { no: "CI 162", dep: "16:25", arr: "19:55", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 161", dep: "12:25", arr: "14:05", aircraft: "A330-300", days: DAILY },
+              { no: "CI 163", dep: "20:55", arr: "22:35", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 170", dep: "07:30", arr: "11:00", aircraft: "B787-10", days: DAILY },
+              { no: "BR 160", dep: "15:15", arr: "18:45", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 169", dep: "12:00", arr: "13:45", aircraft: "B787-10", days: DAILY },
+              { no: "BR 159", dep: "19:45", arr: "21:30", aircraft: "B777-300ER", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TSA-GMP", region: "東北亞", origin: "台北松山 (TSA)", dest: "首爾金浦 (GMP)", tpm: 912,
+        carriers: ["CI", "BR"], keywords: "seoul gimpo 韓國 首爾 金浦 松山",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 260", dep: "09:25", arr: "12:50", aircraft: "A321neo", days: [1, 4, 5, 7] }],
+            in: [{ no: "CI 261", dep: "13:50", arr: "15:30", aircraft: "A321neo", days: [1, 4, 5, 7] }]
+          },
+          BR: {
+            out: [{ no: "BR 156", dep: "09:20", arr: "12:50", aircraft: "A321-200", days: [1, 2, 3, 5, 6] }],
+            in: [{ no: "BR 155", dep: "13:50", arr: "15:35", aircraft: "A321-200", days: [1, 2, 3, 5, 6] }]
+          }
+        }
+      },
+
+      // ==================== 東南亞與港澳 (5條) ====================
+      {
+        id: "TPE-HKG", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "香港 (HKG)", tpm: 501,
+        carriers: ["CI", "BR", "JX"], keywords: "hong kong 香港",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 903", dep: "08:05", arr: "10:00", aircraft: "A350-900", days: DAILY },
+              { no: "CI 909", dep: "10:50", arr: "12:45", aircraft: "A330-300", days: DAILY },
+              { no: "CI 915", dep: "14:45", arr: "16:40", aircraft: "B777-300ER", days: DAILY },
+              { no: "CI 919", dep: "16:50", arr: "18:45", aircraft: "A321neo", days: DAILY },
+              { no: "CI 923", dep: "18:40", arr: "20:35", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 904", dep: "11:05", arr: "12:55", aircraft: "A350-900", days: DAILY },
+              { no: "CI 910", dep: "13:55", arr: "15:45", aircraft: "A330-300", days: DAILY },
+              { no: "CI 916", dep: "17:45", arr: "19:35", aircraft: "B777-300ER", days: DAILY },
+              { no: "CI 920", dep: "19:55", arr: "21:45", aircraft: "A321neo", days: DAILY },
+              { no: "CI 924", dep: "21:40", arr: "23:25", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 891", dep: "07:00", arr: "08:50", aircraft: "B787-10", days: DAILY },
+              { no: "BR 851", dep: "08:15", arr: "10:05", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 867", dep: "10:20", arr: "12:15", aircraft: "B787-10", days: DAILY },
+              { no: "BR 871", dep: "16:35", arr: "18:30", aircraft: "A330-300", days: DAILY },
+              { no: "BR 809", dep: "19:00", arr: "20:55", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 892", dep: "09:50", arr: "11:40", aircraft: "B787-10", days: DAILY },
+              { no: "BR 852", dep: "11:10", arr: "13:00", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 868", dep: "13:20", arr: "15:10", aircraft: "B787-10", days: DAILY },
+              { no: "BR 872", dep: "19:30", arr: "21:20", aircraft: "A330-300", days: DAILY },
+              { no: "BR 810", dep: "21:55", arr: "23:40", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 231", dep: "08:00", arr: "09:50", aircraft: "A350-900", days: DAILY },
+              { no: "JX 235", dep: "16:55", arr: "18:45", aircraft: "A330neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 232", dep: "11:00", arr: "12:50", aircraft: "A350-900", days: DAILY },
+              { no: "JX 236", dep: "19:55", arr: "21:45", aircraft: "A330neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-BKK", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "曼谷蘇凡納布 (BKK)", tpm: 1554,
+        carriers: ["CI", "BR", "JX"], keywords: "bangkok thailand 泰國 曼谷",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 831", dep: "09:40", arr: "12:30", aircraft: "A350-900", days: DAILY },
+              { no: "CI 835", dep: "13:35", arr: "16:25", aircraft: "A330-300", days: DAILY },
+              { no: "CI 837", dep: "22:00", arr: "00:50", arrNext: true, aircraft: "A321neo", days: [2, 4, 6] }
+            ],
+            in: [
+              { no: "CI 838", dep: "02:00", arr: "06:40", aircraft: "A321neo", days: [3, 5, 7] },
+              { no: "CI 832", dep: "13:40", arr: "18:20", aircraft: "A350-900", days: DAILY },
+              { no: "CI 836", dep: "17:35", arr: "22:15", aircraft: "A330-300", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 211", dep: "08:25", arr: "11:15", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 067", dep: "09:00", arr: "11:50", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 205", dep: "20:30", arr: "23:20", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 206", dep: "01:45", arr: "06:25", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 212", dep: "12:25", arr: "17:05", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 068", dep: "16:25", arr: "21:05", aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 741", dep: "09:20", arr: "12:15", aircraft: "A350-900", days: DAILY },
+              { no: "JX 745", dep: "13:15", arr: "16:10", aircraft: "A330neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 742", dep: "13:25", arr: "18:05", aircraft: "A350-900", days: DAILY },
+              { no: "JX 746", dep: "17:20", arr: "22:00", aircraft: "A330neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-SIN", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "新加坡 (SIN)", tpm: 2002,
+        carriers: ["CI", "BR", "JX"], keywords: "singapore 新加坡",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 753", dep: "08:05", arr: "12:45", aircraft: "A350-900", days: DAILY },
+              { no: "CI 751", dep: "15:50", arr: "20:30", aircraft: "A321neo", days: [2, 4, 6] }
+            ],
+            in: [
+              { no: "CI 752", dep: "10:15", arr: "15:00", aircraft: "A321neo", days: [3, 5, 7] },
+              { no: "CI 754", dep: "14:05", arr: "18:50", aircraft: "A350-900", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 225", dep: "07:40", arr: "12:05", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 215", dep: "09:25", arr: "13:50", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 226", dep: "13:15", arr: "18:00", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 216", dep: "15:10", arr: "19:55", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 771", dep: "08:10", arr: "12:45", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "JX 772", dep: "14:00", arr: "18:45", aircraft: "A350-900", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-SGN", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "胡志明市 (SGN)", tpm: 1378,
+        carriers: ["CI", "BR", "JX"], keywords: "ho chi minh saigon vietnam 越南 胡志明",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 781", dep: "07:20", arr: "09:50", aircraft: "A350-900", days: DAILY },
+              { no: "CI 783", dep: "13:45", arr: "16:15", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 782", dep: "10:55", arr: "15:20", aircraft: "A350-900", days: DAILY },
+              { no: "CI 784", dep: "17:30", arr: "21:55", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 395", dep: "07:20", arr: "09:45", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 391", dep: "09:20", arr: "11:45", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 396", dep: "12:45", arr: "17:10", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 392", dep: "12:55", arr: "17:20", aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 711", dep: "07:50", arr: "10:20", aircraft: "A330neo", days: DAILY },
+              { no: "JX 713", dep: "13:30", arr: "16:00", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 712", dep: "11:30", arr: "15:50", aircraft: "A330neo", days: DAILY },
+              { no: "JX 714", dep: "17:10", arr: "21:30", aircraft: "A321neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-KUL", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "吉隆坡 (KUL)", tpm: 2015,
+        carriers: ["CI", "BR", "JX"], keywords: "kuala lumpur malaysia 馬來西亞 吉隆坡",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 721", dep: "08:30", arr: "13:15", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "CI 722", dep: "14:35", arr: "19:20", aircraft: "A350-900", days: DAILY }]
+          },
+          BR: {
+            out: [
+              { no: "BR 227", dep: "09:30", arr: "14:15", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 217", dep: "06:20", arr: "11:05", aircraft: "B787-10", days: [2, 4, 6, 7] }
+            ],
+            in: [
+              { no: "BR 218", dep: "12:15", arr: "17:05", aircraft: "B787-10", days: [2, 4, 6, 7] },
+              { no: "BR 228", dep: "15:25", arr: "20:15", aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 725", dep: "09:40", arr: "14:25", aircraft: "A330neo", days: DAILY }],
+            in: [{ no: "JX 726", dep: "15:35", arr: "20:25", aircraft: "A330neo", days: DAILY }]
+          }
+        }
+      },
+
+      // ==================== 北美線 (9條) ====================
+      {
+        id: "TPE-LAX", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "洛杉磯 (LAX)", tpm: 6781,
+        carriers: ["CI", "BR", "JX"], keywords: "los angeles usa 美國 洛杉磯",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 006", dep: "17:10", arr: "13:55", aircraft: "B777-300ER", days: [1, 3, 5, 6] },
+              { no: "CI 008", dep: "23:50", arr: "20:35", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "CI 005", dep: "15:55", arr: "21:15", arrNext: true, aircraft: "B777-300ER", days: [1, 3, 5, 6] },
+              { no: "CI 007", dep: "23:10", arr: "04:30", arrNext: true, aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 006", dep: "10:10", arr: "06:55", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 012", dep: "19:20", arr: "16:05", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 016", dep: "23:55", arr: "20:40", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 005", dep: "11:30", arr: "16:50", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 011", dep: "17:50", arr: "23:10", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 015", dep: "23:30", arr: "04:50", arrNext: true, aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 006", dep: "17:30", arr: "14:20", aircraft: "A350-900", days: [2, 4, 6] },
+              { no: "JX 002", dep: "23:40", arr: "20:30", aircraft: "A350-900", days: DAILY }
+            ],
+            in: [
+              { no: "JX 005", dep: "16:30", arr: "21:55", arrNext: true, aircraft: "A350-900", days: [2, 4, 6] },
+              { no: "JX 001", dep: "23:50", arr: "05:15", arrNext: true, aircraft: "A350-900", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-ONT", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "安大略 / 大洛杉磯 (ONT)", tpm: 6814,
+        carriers: ["CI", "JX"], keywords: "ontario california usa 美國 安大略 加州",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 024", dep: "20:05", arr: "16:55", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "CI 023", dep: "23:15", arr: "04:40", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          },
+          JX: {
+            out: [{ no: "JX 010", dep: "20:05", arr: "17:05", aircraft: "A350-900", days: [1, 3, 5, 7] }],
+            in: [{ no: "JX 009", dep: "23:10", arr: "04:45", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-SFO", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "舊金山 (SFO)", tpm: 6456,
+        carriers: ["CI", "BR", "JX"], keywords: "san francisco usa 美國 舊金山",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 004", dep: "23:30", arr: "19:35", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "CI 003", dep: "00:35", arr: "05:25", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          },
+          BR: {
+            out: [
+              { no: "BR 008", dep: "10:15", arr: "06:20", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 018", dep: "19:40", arr: "15:45", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 028", dep: "23:30", arr: "19:35", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 027", dep: "00:30", arr: "05:15", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 007", dep: "12:00", arr: "16:45", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 017", dep: "17:45", arr: "22:30", arrNext: true, aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 012", dep: "23:30", arr: "19:35", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "JX 011", dep: "23:40", arr: "04:30", arrNext: true, aircraft: "A350-900", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-SEA", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "西雅圖 (SEA)", tpm: 6064,
+        carriers: ["CI", "BR", "JX"], keywords: "seattle usa 美國 西雅圖",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 022", dep: "23:30", arr: "19:15", aircraft: "A350-900", days: [1, 2, 4, 6, 7] }],
+            in: [{ no: "CI 021", dep: "01:40", arr: "05:05", arrNext: true, aircraft: "A350-900", days: [1, 2, 3, 5, 7] }]
+          },
+          BR: {
+            out: [
+              { no: "BR 024", dep: "19:30", arr: "15:10", aircraft: "B787-9", days: [2, 4, 6] },
+              { no: "BR 026", dep: "23:40", arr: "19:20", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 025", dep: "01:10", arr: "04:45", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 023", dep: "17:10", arr: "20:45", arrNext: true, aircraft: "B787-9", days: [2, 4, 6] }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 032", dep: "20:00", arr: "15:45", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "JX 031", dep: "01:30", arr: "05:00", arrNext: true, aircraft: "A350-900", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-JFK", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "紐約甘迺迪 (JFK)", tpm: 7799,
+        carriers: ["CI", "BR"], keywords: "new york usa 美國 紐約",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 012", dep: "17:30", arr: "20:25", aircraft: "B777-300ER", days: [2, 3, 5, 7] }],
+            in: [{ no: "CI 011", dep: "00:35", arr: "04:40", arrNext: true, aircraft: "B777-300ER", days: [1, 3, 4, 6] }]
+          },
+          BR: {
+            out: [
+              { no: "BR 030", dep: "17:30", arr: "20:25", aircraft: "B777-300ER", days: [1, 4, 6] },
+              { no: "BR 032", dep: "19:10", arr: "22:05", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 031", dep: "00:30", arr: "04:45", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 029", dep: "23:30", arr: "03:45", arrNext: true, aircraft: "B777-300ER", days: [1, 4, 6] }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-IAH", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "休士頓 (IAH)", tpm: 7936,
+        carriers: ["BR"], keywords: "houston texas usa 美國 休士頓",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 052", dep: "20:00", arr: "20:45", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 051", dep: "00:15", arr: "05:35", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-ORD", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "芝加哥 (ORD)", tpm: 7448,
+        carriers: ["BR"], keywords: "chicago usa 美國 芝加哥",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 056", dep: "19:50", arr: "20:35", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 055", dep: "00:20", arr: "05:25", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-YVR", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "溫哥華 (YVR)", tpm: 5955,
+        carriers: ["CI", "BR"], keywords: "vancouver canada 加拿大 溫哥華",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 032", dep: "23:55", arr: "19:25", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "CI 031", dep: "01:15", arr: "04:30", arrNext: true, aircraft: "A350-900", days: DAILY }]
+          },
+          BR: {
+            out: [{ no: "BR 010", dep: "23:55", arr: "19:25", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 009", dep: "01:30", arr: "04:45", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-YYZ", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "多倫多 (YYZ)", tpm: 7496,
+        carriers: ["BR"], keywords: "toronto canada 加拿大 多倫多",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 036", dep: "19:20", arr: "21:25", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 035", dep: "00:45", arr: "05:00", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+
+      // ==================== 歐洲線 (9條) ====================
+      {
+        id: "TPE-MUC", region: "歐洲", origin: "台北桃園 (TPE)", dest: "慕尼黑 (MUC)", tpm: 5762,
+        carriers: ["BR"], keywords: "munich germany 德國 慕尼黑",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 071", dep: "23:25", arr: "06:10", arrNext: true, aircraft: "B787-9", days: [1, 3, 5, 7] }],
+            in: [{ no: "BR 072", dep: "11:30", arr: "06:30", arrNext: true, aircraft: "B787-9", days: [1, 2, 4, 6] }]
+          }
+        }
+      },
+      {
+        id: "TPE-LHR", region: "歐洲", origin: "台北桃園 (TPE)", dest: "倫敦希斯洛 (LHR)", tpm: 6085,
+        carriers: ["CI", "BR"], keywords: "london uk 英國 倫敦",
+        note: "備註：長榮 BR 067 / BR 068 採中停曼谷（同機原班號直飛倫敦）模式營運。",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 081", dep: "09:10", arr: "16:25", aircraft: "A350-900", days: [1, 3, 5, 6, 7] }],
+            in: [{ no: "CI 082", dep: "21:15", arr: "18:10", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 6, 7] }]
+          },
+          BR: {
+            out: [{ no: "BR 067", dep: "09:00", arr: "19:15", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 068", dep: "21:20", arr: "21:05", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-FRA", region: "歐洲", origin: "台北桃園 (TPE)", dest: "法蘭克福 (FRA)", tpm: 5826,
+        carriers: ["CI"], keywords: "frankfurt germany 德國 法蘭克福",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 061", dep: "23:15", arr: "06:50", arrNext: true, aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "CI 062", dep: "11:20", arr: "06:10", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-CDG", region: "歐洲", origin: "台北桃園 (TPE)", dest: "巴黎戴高樂 (CDG)", tpm: 6093,
+        carriers: ["BR"], keywords: "paris france 法國 巴黎",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 087", dep: "23:30", arr: "07:20", arrNext: true, aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 088", dep: "11:20", arr: "06:30", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-AMS", region: "歐洲", origin: "台北桃園 (TPE)", dest: "阿姆斯特丹 (AMS)", tpm: 5874,
+        carriers: ["CI", "BR"], keywords: "amsterdam netherlands 荷蘭 阿姆斯特丹",
+        note: "備註：長榮 BR 075 / BR 076 採中停曼谷（同機原班號直飛阿姆斯特丹）模式營運。",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 073", dep: "23:55", arr: "07:35", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 6] }],
+            in: [{ no: "CI 074", dep: "11:20", arr: "06:15", arrNext: true, aircraft: "A350-900", days: [2, 4, 6, 7] }]
+          },
+          BR: {
+            out: [{ no: "BR 075", dep: "08:40", arr: "19:35", aircraft: "B787-9", days: [2, 4, 6] }],
+            in: [{ no: "BR 076", dep: "21:40", arr: "21:15", arrNext: true, aircraft: "B787-9", days: [2, 4, 6] }]
+          }
+        }
+      },
+      {
+        id: "TPE-VIE", region: "歐洲", origin: "台北桃園 (TPE)", dest: "維也納 (VIE)", tpm: 5584,
+        carriers: ["CI", "BR"], keywords: "vienna austria 奧地利 維也納",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 063", dep: "23:30", arr: "06:35", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 7] }],
+            in: [{ no: "CI 064", dep: "11:00", arr: "05:30", arrNext: true, aircraft: "A350-900", days: [1, 2, 4, 6] }]
+          },
+          BR: {
+            out: [{ no: "BR 065", dep: "23:30", arr: "06:40", arrNext: true, aircraft: "B777-300ER", days: [2, 4, 6] }],
+            in: [{ no: "BR 066", dep: "11:30", arr: "06:00", arrNext: true, aircraft: "B777-300ER", days: [3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-PRG", region: "歐洲", origin: "台北桃園 (TPE)", dest: "布拉格 (PRG)", tpm: 5624,
+        carriers: ["CI"], keywords: "prague czech 捷克 布拉格",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 067", dep: "23:20", arr: "06:50", arrNext: true, aircraft: "A350-900", days: [2, 6] }],
+            in: [{ no: "CI 068", dep: "11:05", arr: "05:35", arrNext: true, aircraft: "A350-900", days: [3, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-MXP", region: "歐洲", origin: "台北桃園 (TPE)", dest: "米蘭 (MXP)", tpm: 5960,
+        carriers: ["BR"], keywords: "milan italy 義大利 米蘭",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 095", dep: "23:40", arr: "07:15", arrNext: true, aircraft: "B777-300ER", days: [2, 4, 6, 7] }],
+            in: [{ no: "BR 096", dep: "11:15", arr: "06:15", arrNext: true, aircraft: "B777-300ER", days: [1, 3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-FCO", region: "歐洲", origin: "台北桃園 (TPE)", dest: "羅馬達文西 (FCO)", tpm: 5975,
+        carriers: ["CI"], keywords: "rome italy 義大利 羅馬",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 075", dep: "23:45", arr: "07:45", arrNext: true, aircraft: "A350-900", days: [2, 4, 7] }],
+            in: [{ no: "CI 076", dep: "11:00", arr: "05:45", arrNext: true, aircraft: "A350-900", days: [1, 3, 5] }]
+          }
+        }
+      },
+
+      // ==================== 大洋洲 (紐澳 4條) ====================
+      {
+        id: "TPE-SYD", region: "大洋洲 (紐澳)", origin: "台北桃園 (TPE)", dest: "雪梨 (SYD)", tpm: 4518,
+        carriers: ["CI"], keywords: "sydney australia 澳洲 雪梨",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 051", dep: "23:55", arr: "12:15", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 6, 7] }],
+            in: [{ no: "CI 052", dep: "22:10", arr: "05:15", arrNext: true, aircraft: "A350-900", days: [1, 2, 4, 6, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-MEL", region: "大洋洲 (紐澳)", origin: "台北桃園 (TPE)", dest: "墨爾本 (MEL)", tpm: 4595,
+        carriers: ["CI"], keywords: "melbourne australia 澳洲 墨爾本",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 057", dep: "23:50", arr: "12:10", arrNext: true, aircraft: "A350-900", days: [2, 4, 6] }],
+            in: [{ no: "CI 058", dep: "22:20", arr: "05:30", arrNext: true, aircraft: "A350-900", days: [3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-BNE", region: "大洋洲 (紐澳)", origin: "台北桃園 (TPE)", dest: "布里斯本 (BNE)", tpm: 4195,
+        carriers: ["CI", "BR"], keywords: "brisbane australia 澳洲 布里斯本",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 053", dep: "23:50", arr: "10:45", arrNext: true, aircraft: "A350-900", days: [1, 2, 4, 6] }],
+            in: [{ no: "CI 054", dep: "22:45", arr: "05:35", arrNext: true, aircraft: "A350-900", days: [2, 3, 5, 7] }]
+          },
+          BR: {
+            out: [{ no: "BR 315", dep: "23:10", arr: "10:05", arrNext: true, aircraft: "B787-9", days: [1, 4, 6] }],
+            in: [{ no: "BR 316", dep: "22:25", arr: "05:15", arrNext: true, aircraft: "B787-9", days: [2, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-AKL", region: "大洋洲 (紐澳)", origin: "台北桃園 (TPE)", dest: "奧克蘭 (AKL)", tpm: 5508,
+        carriers: ["CI"], keywords: "auckland new zealand 紐西蘭 奧克蘭",
+        note: "備註：華航 CI 055 / CI 056 採中停布里斯本（同機原班號直飛奧克蘭）模式營運。",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 055", dep: "23:50", arr: "17:45", arrNext: true, aircraft: "A350-900", days: [1, 2, 4, 6] }],
+            in: [{ no: "CI 056", dep: "19:35", arr: "05:35", arrNext: true, aircraft: "A350-900", days: [2, 3, 5, 7] }]
+          }
+        }
+      }
+    ];
+
+    // 系統全域狀態
+    const state = {
+      activeTab: "schedule",
+      airline: "BR",
+      routeId: "TPE-NRT",
+      multiplier: 2,
+      cabinFilter: "ALL",
+      dayFilter: "ALL",
+      schedHwCabinFilter: "ALL",   // 'ALL' | 'FIRST' | 'PE' | 'TWO_CLASS'
+      schedAircraftFilter: "ALL",  // 'ALL' | 'B787-9' | ...
+      searchQuery: ""
+    };
+
+    // DOM 參照
+    const mainNavTabs = document.getElementById("mainNavTabs");
+    const airlineTabs = document.getElementById("airlineTabs");
+    const routeSelect = document.getElementById("routeSelect");
+    const routeSearch = document.getElementById("routeSearch");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    const routeCount = document.getElementById("routeCount");
+    const tripToggle = document.getElementById("tripToggle");
+    const cabinFilters = document.getElementById("cabinFilters");
+    const dayFilterBar = document.getElementById("dayFilterBar");
+    const schedCabinFilterBar = document.getElementById("schedCabinFilterBar");
+    const schedAircraftFilterBar = document.getElementById("schedAircraftFilterBar");
+    const resetSchedFiltersBtn = document.getElementById("resetSchedFiltersBtn");
+
+    const fmt = (num) => Math.round(num).toLocaleString("zh-TW");
+
+    // 取得機型對應的所有艙等陣列
+    const _warned = new Set();
+    function getAircraftCabins(airlineCode, aircraftModel) {
+      const hit = AIRCRAFT_CABINS[airlineCode]?.[aircraftModel];
+      if (hit) return hit;
+      const k = airlineCode + aircraftModel;
+      if (!_warned.has(k)) { _warned.add(k); console.warn(`[資料] 未定義機型艙等：${airlineCode} ${aircraftModel}，暫以兩艙等顯示`); }
+      return [
+        { key: "BIZ", name: "商務艙", cls: "cabin-biz" },
+        { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+      ];
+    }
+
+    // 切換主分頁
+    function switchMainTab(tabName) {
+      state.activeTab = tabName;
+      mainNavTabs.querySelectorAll(".nav-tab-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.tab === tabName);
+      });
+
+      document.getElementById("tab-miles").classList.toggle("active", tabName === "miles");
+      document.getElementById("tab-schedule").classList.toggle("active", tabName === "schedule");
+
+      document.getElementById("milesRightControl").style.display = tabName === "miles" ? "block" : "none";
+      document.getElementById("scheduleRightControl").style.display = tabName === "schedule" ? "block" : "none";
+
+      renderAll();
+    }
+
+    // 取得符合條件的航線清單
+    function getFilteredRoutes() {
+      const tokens = state.searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      return ROUTES.filter((r) => {
+        if (!r.carriers.includes(state.airline)) return false;
+        if (!tokens.length) return true;
+        const searchable = (r._search ??= `${r.id} ${r.origin} ${r.dest} ${r.region} ${r.keywords}`.toLowerCase());
+        return tokens.every((t) => searchable.includes(t));
+      });
+    }
+
+    // 渲染航線下拉選單
+    function renderRouteDropdown() {
+      const filtered = getFilteredRoutes();
+      routeCount.textContent = filtered.length;
+      routeSelect.innerHTML = "";
+
+      if (filtered.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "查無符合條件的直飛航線，請調整關鍵字";
+        routeSelect.appendChild(opt);
+        state.routeId = null;
+        return;
+      }
+
+      if (!filtered.some((r) => r.id === state.routeId)) {
+        state.routeId = filtered[0].id;
+        state.schedAircraftFilter = "ALL";
+      }
+
+      const groups = {};
+      filtered.forEach((r) => {
+        if (!groups[r.region]) groups[r.region] = [];
+        groups[r.region].push(r);
+      });
+
+      Object.entries(groups).forEach(([region, items]) => {
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = `── ${region} ──`;
+        items.forEach((r) => {
+          const opt = document.createElement("option");
+          opt.value = r.id;
+          const sched = r.schedules?.[state.airline];
+          const outCnt = sched ? sched.out.reduce((sum, f) => sum + f.days.length, 0) : 0;
+          opt.textContent = `${r.origin} ↔ ${r.dest}（單程 ${fmt(r.tpm)} 哩 ｜ 每週 ${outCnt} 班）`;
+          if (r.id === state.routeId) opt.selected = true;
+          optgroup.appendChild(opt);
+        });
+        routeSelect.appendChild(optgroup);
+      });
+    }
+
+    // 渲染分頁 1：哩程試算
+    function renderMilesTab(airlineObj, routeObj) {
+      const chartContainer = document.getElementById("chartContainer");
+      const tableBody = document.getElementById("tableBody");
+
+      document.getElementById("tableMilesHeader").textContent =
+        `${state.multiplier === 2 ? "來回" : "單程"}可累積哩程`;
+
+      if (!routeObj) {
+        chartContainer.innerHTML = `<p style="color:var(--text-secondary);">請選擇有效航線。</p>`;
+        tableBody.innerHTML = "";
+        return;
+      }
+
+      const allCalculated = airlineObj.tiers.map((tier, idx) => ({
+        ...tier,
+        idx,
+        miles: Math.round(routeObj.tpm * tier.ratio * state.multiplier)
+      }));
+
+      const visibleTiers = allCalculated.filter((t) =>
+        state.cabinFilter === "ALL" ? true : t.group === state.cabinFilter
+      );
+
+      const standardMiles = Math.round(routeObj.tpm * 1.0 * state.multiplier);
+      const maxTierObj = allCalculated[0];
+
+      document.getElementById("statRouteTitle").textContent = `${routeObj.origin} ↔ ${routeObj.dest}`;
+      document.getElementById("statRegion").textContent = `${routeObj.region} ｜ ${airlineObj.name}直飛`;
+      document.getElementById("statBaseTpm").textContent = `${fmt(routeObj.tpm)} 哩`;
+      document.getElementById("statStandardMiles").textContent = `${fmt(standardMiles)} 哩`;
+      document.getElementById("statTripLabel").textContent = `${state.multiplier === 2 ? "來回" : "單程"} 100% 經濟艙基準`;
+      document.getElementById("statMaxMiles").textContent = `${fmt(maxTierObj.miles)} 哩`;
+      document.getElementById("statMaxTier").textContent = `${maxTierObj.cabin} (${maxTierObj.rbd}) ・ ${Math.round(maxTierObj.ratio * 100)}%`;
+
+      const maxPossible = maxTierObj.miles || 1;
+      chartContainer.innerHTML = visibleTiers
+        .map((t) => {
+          const pct = Math.max(0, Math.min(100, (t.miles / maxPossible) * 100));
+          const ratioPct = Math.round(t.ratio * 100);
+          return `
+            <div class="chart-row" data-idx="${t.idx}">
+              <div class="chart-meta">
+                <span class="chart-meta-left">
+                  ${t.cabin}・${t.fare}
+                  <span class="rbd-tag">${t.rbd}</span>
+                </span>
+                <span class="chart-meta-right">
+                  ${fmt(t.miles)} 哩 <small style="font-weight:500;color:var(--text-secondary);">(${ratioPct}%)</small>
+                </span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill ${t.miles === 0 ? "zero" : ""}" style="width: ${t.miles === 0 ? 4 : pct}%"></div>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      tableBody.innerHTML = visibleTiers
+        .map((t) => {
+          const ratioPct = Math.round(t.ratio * 100);
+          return `
+            <tr data-idx="${t.idx}">
+              <td><span class="cabin-badge ${t.badge}">${t.cabin}</span></td>
+              <td>${t.fare}</td>
+              <td><span class="rbd-tag" style="margin-left:0;">${t.rbd}</span></td>
+              <td class="num">${ratioPct}%</td>
+              <td class="num ${t.miles === 0 ? "miles-zero" : "miles-num"}">
+                ${t.miles === 0 ? "0 哩 (不可累積)" : `${fmt(t.miles)} 哩`}
+              </td>
+            </tr>
+          `;
+        })
+        .join("");
+
+    }
+
+    // 哩程頁圖表與表格連動高亮（事件委派，只綁一次）
+    (function bindTierHover() {
+      const pane = document.getElementById("tab-miles");
+      let current = null;
+      const toggle = (id, on) =>
+        id != null && pane.querySelectorAll(`[data-idx="${id}"]`).forEach((m) => m.classList.toggle("hovered", on));
+      pane.addEventListener("mouseover", (e) => {
+        const id = e.target.closest("[data-idx]")?.dataset.idx ?? null;
+        if (id === current) return;
+        toggle(current, false); current = id; toggle(current, true);
+      });
+      pane.addEventListener("mouseleave", () => { toggle(current, false); current = null; });
+    })();
+
+    // 渲染每週一至日圓點 HTML
+    function renderWeekDots(daysArray) {
+      const labels = ["一", "二", "三", "四", "五", "六", "日"];
+      return `<div class="week-dots">` +
+        [1, 2, 3, 4, 5, 6, 7]
+          .map((d, i) => {
+            const isActive = daysArray.includes(d);
+            const isSelectedDay = state.dayFilter !== "ALL" && Number(state.dayFilter) === d && isActive;
+            return `<span class="day-dot ${isActive ? "active" : ""} ${isSelectedDay ? "highlight-day" : ""}" title="週${labels[i]}${isActive ? "飛航" : "無飛航"}">${labels[i]}</span>`;
+          })
+          .join("") +
+        `</div>`;
+    }
+
+    // 依據飛航日 + 配備客艙 + 執飛機型交集過濾航班
+    function filterFlights(flights) {
+      return flights.filter((f) => {
+        // 1. 星期篩選
+        if (state.dayFilter !== "ALL" && !f.days.includes(Number(state.dayFilter))) {
+          return false;
+        }
+        // 2. 機型篩選
+        if (state.schedAircraftFilter !== "ALL" && f.aircraft !== state.schedAircraftFilter) {
+          return false;
+        }
+        // 3. 配備客艙篩選
+        const cabins = getAircraftCabins(state.airline, f.aircraft);
+        const keys = cabins.map((c) => c.key);
+        if (state.schedHwCabinFilter === "FIRST" && !keys.includes("FIRST")) return false;
+        if (state.schedHwCabinFilter === "PE" && !keys.includes("PE")) return false;
+        if (state.schedHwCabinFilter === "TWO_CLASS" && (keys.includes("PE") || keys.includes("FIRST"))) return false;
+
+        return true;
+      });
+    }
+
+    // 動態渲染當前航線可用的執飛機型按鈕列
+    function renderAircraftFilterPills(sched) {
+      const allFlights = [...(sched.out || []), ...(sched.in || [])];
+      const uniqueModels = Array.from(new Set(allFlights.map((f) => f.aircraft)));
+
+      if (!uniqueModels.includes(state.schedAircraftFilter)) {
+        state.schedAircraftFilter = "ALL";
+      }
+
+      let html = `<button class="filter-pill ${state.schedAircraftFilter === "ALL" ? "active" : ""}" data-ac="ALL">全部機型</button>`;
+      uniqueModels.forEach((model) => {
+        const cabins = getAircraftCabins(state.airline, model);
+        const activeCls = state.schedAircraftFilter === model ? "active" : "";
+        html += `<button class="filter-pill ${activeCls}" data-ac="${model}">${model} <span class="pill-sub-tag">${cabins.length}艙等</span></button>`;
+      });
+
+      schedAircraftFilterBar.innerHTML = html;
+    }
+
+    // 渲染單向航班表格列（含機型與配備的所有艙等）
+    function renderFlightRows(filteredFlights, tbodyEl) {
+      if (filteredFlights.length === 0) {
+        tbodyEl.innerHTML = `<tr><td colspan="4" class="empty-schedule">無符合目前篩選條件（飛航日／客艙／機型）的班次，可點擊上方「重設篩選條件」。</td></tr>`;
+        return;
+      }
+
+      tbodyEl.innerHTML = filteredFlights
+        .map((f) => {
+          const cabins = getAircraftCabins(state.airline, f.aircraft);
+          const cabinBadgesHtml = cabins
+            .map((c) => `<span class="mini-cabin ${c.cls}">${c.name}</span>`)
+            .join("");
+
+          return `
+            <tr>
+              <td><span class="flight-no">${f.no}</span></td>
+              <td>
+                <div class="time-block">
+                  <span class="time-val">${f.dep}</span>
+                  <span style="color:var(--text-secondary);">→</span>
+                  <span class="time-val">${f.arr}</span>
+                  ${f.arrNext ? `<span class="next-day-tag">+1</span>` : ""}
+                </div>
+              </td>
+              <td>
+                <div class="aircraft-cell">
+                  <span class="aircraft-name">🛩️ ${f.aircraft}</span>
+                  <div class="cabin-pill-group">${cabinBadgesHtml}</div>
+                </div>
+              </td>
+              <td>${renderWeekDots(f.days)}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+
+    // 渲染分頁 2：每週航班時刻表
+    function renderScheduleTab(airlineObj, routeObj) {
+      const outBody = document.getElementById("outboundTableBody");
+      const inBody = document.getElementById("inboundTableBody");
+      const noteBanner = document.getElementById("routeNoteBanner");
+
+      if (!routeObj) {
+        outBody.innerHTML = "";
+        inBody.innerHTML = "";
+        noteBanner.style.display = "none";
+        ["schedRouteTitle", "schedAirlineSub", "schedAircraftSummary", "schedCabinSummary"]
+          .forEach((id) => (document.getElementById(id).textContent = "—"));
+        ["schedOutFreq", "schedInFreq"].forEach((id) => (document.getElementById(id).textContent = "0 班 / 週"));
+        schedAircraftFilterBar.innerHTML = "";
+        return;
+      }
+
+      // 顯示或隱藏航線特別備註（如中停同機直飛）
+      if (routeObj.note) {
+        noteBanner.textContent = `ℹ️ ${routeObj.note}`;
+        noteBanner.style.display = "block";
+      } else {
+        noteBanner.style.display = "none";
+      }
+
+      const sched = routeObj.schedules?.[state.airline] || { out: [], in: [] };
+      renderAircraftFilterPills(sched);
+
+      // 同步「重設篩選條件」按鈕顯示狀態
+      const hasAnyFilter = state.dayFilter !== "ALL" || state.schedHwCabinFilter !== "ALL" || state.schedAircraftFilter !== "ALL";
+      resetSchedFiltersBtn.style.display = hasAnyFilter ? "inline-block" : "none";
+
+      // 同步客艙篩選按鈕 active 樣式
+      schedCabinFilterBar.querySelectorAll(".filter-pill").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.hwcabin === state.schedHwCabinFilter);
+      });
+
+      const filteredOut = filterFlights(sched.out);
+      const filteredIn = filterFlights(sched.in);
+
+      const outWeeklyTotal = filteredOut.reduce((sum, f) => sum + f.days.length, 0);
+      const inWeeklyTotal = filteredIn.reduce((sum, f) => sum + f.days.length, 0);
+
+      // 彙整目前顯示班次的主力機型與所有提供艙等
+      const visibleFlights = [...filteredOut, ...filteredIn];
+      const aircraftSet = new Set(visibleFlights.map((f) => f.aircraft));
+      const aircraftText = aircraftSet.size > 0 ? Array.from(aircraftSet).join(" / ") : "無符合班次";
+
+      const cabinSet = new Set();
+      aircraftSet.forEach((ac) => {
+        getAircraftCabins(state.airline, ac).forEach((c) => cabinSet.add(c.name));
+      });
+      const cabinSummaryText = cabinSet.size > 0
+        ? `提供：${Array.from(cabinSet).join("・")}`
+        : "請調整機型或客艙篩選條件";
+
+      document.getElementById("schedRouteTitle").textContent = `${routeObj.origin} ↔ ${routeObj.dest}`;
+      document.getElementById("schedAirlineSub").textContent = `${airlineObj.name} (${airlineObj.code}) 直飛定期班表`;
+      document.getElementById("schedOutFreq").textContent = `${outWeeklyTotal} 班 / 週`;
+      document.getElementById("schedOutFlightCount").textContent = `顯示 ${filteredOut.length} / 共 ${sched.out.length} 個去程航班號`;
+      document.getElementById("schedInFreq").textContent = `${inWeeklyTotal} 班 / 週`;
+      document.getElementById("schedInFlightCount").textContent = `顯示 ${filteredIn.length} / 共 ${sched.in.length} 個回程航班號`;
+      document.getElementById("schedAircraftSummary").textContent = aircraftText;
+      document.getElementById("schedCabinSummary").textContent = cabinSummaryText;
+
+      document.getElementById("outboundHeaderTitle").textContent = `${routeObj.origin} → ${routeObj.dest}`;
+      document.getElementById("inboundHeaderTitle").textContent = `${routeObj.dest} → ${routeObj.origin}`;
+
+      renderFlightRows(filteredOut, outBody);
+      renderFlightRows(filteredIn, inBody);
+    }
+
+    function renderAll() {
+      const airlineObj = AIRLINES[state.airline];
+      const routeObj = ROUTES.find((r) => r.id === state.routeId);
+      if (state.activeTab === "miles") renderMilesTab(airlineObj, routeObj);
+      else renderScheduleTab(airlineObj, routeObj);
+    }
+
+    // ==================== 事件監聽綁定 ====================
+
+    mainNavTabs.addEventListener("click", (e) => {
+      const btn = e.target.closest(".nav-tab-btn");
+      if (!btn) return;
+      switchMainTab(btn.dataset.tab);
+    });
+
+    document.getElementById("jumpToScheduleBtn").addEventListener("click", () => switchMainTab("schedule"));
+    document.getElementById("jumpToMilesBtn").addEventListener("click", () => switchMainTab("miles"));
+
+    airlineTabs.addEventListener("click", (e) => {
+      const btn = e.target.closest(".airline-btn");
+      if (!btn) return;
+      state.airline = btn.dataset.code;
+      state.schedAircraftFilter = "ALL";
+      document.body.setAttribute("data-airline", state.airline);
+      airlineTabs.querySelectorAll(".airline-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderRouteDropdown();
+      renderAll();
+    });
+
+    routeSearch.addEventListener("input", (e) => {
+      state.searchQuery = e.target.value;
+      clearSearchBtn.style.display = state.searchQuery ? "block" : "none";
+      renderRouteDropdown();
+      renderAll();
+    });
+
+    clearSearchBtn.addEventListener("click", () => {
+      routeSearch.value = "";
+      state.searchQuery = "";
+      clearSearchBtn.style.display = "none";
+      renderRouteDropdown();
+      renderAll();
+    });
+
+    routeSelect.addEventListener("change", (e) => {
+      state.routeId = e.target.value;
+      state.schedAircraftFilter = "ALL";
+      renderAll();
+    });
+
+    tripToggle.addEventListener("click", (e) => {
+      const btn = e.target.closest(".trip-btn");
+      if (!btn) return;
+      state.multiplier = Number(btn.dataset.mult);
+      tripToggle.querySelectorAll(".trip-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderAll();
+    });
+
+    cabinFilters.addEventListener("click", (e) => {
+      const pill = e.target.closest(".filter-pill");
+      if (!pill) return;
+      state.cabinFilter = pill.dataset.cabin;
+      cabinFilters.querySelectorAll(".filter-pill").forEach((p) => p.classList.remove("active"));
+      pill.classList.add("active");
+      renderAll();
+    });
+
+    dayFilterBar.addEventListener("click", (e) => {
+      const btn = e.target.closest(".day-filter-btn");
+      if (!btn) return;
+      state.dayFilter = btn.dataset.day;
+      dayFilterBar.querySelectorAll(".day-filter-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderAll();
+    });
+
+    // 時刻表：配備客艙篩選
+    schedCabinFilterBar.addEventListener("click", (e) => {
+      const pill = e.target.closest(".filter-pill");
+      if (!pill) return;
+      state.schedHwCabinFilter = pill.dataset.hwcabin;
+      renderAll();
+    });
+
+    // 時刻表：執飛機型篩選
+    schedAircraftFilterBar.addEventListener("click", (e) => {
+      const pill = e.target.closest(".filter-pill");
+      if (!pill) return;
+      state.schedAircraftFilter = pill.dataset.ac;
+      renderAll();
+    });
+
+    // 重設時刻表所有篩選條件
+    resetSchedFiltersBtn.addEventListener("click", () => {
+      state.dayFilter = "ALL";
+      state.schedHwCabinFilter = "ALL";
+      state.schedAircraftFilter = "ALL";
+      dayFilterBar.querySelectorAll(".day-filter-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.day === "ALL");
+      });
+      renderAll();
+    });
+
+    // 複製到剪貼簿（含 file:// 或非 HTTPS 環境的後備方案與失敗提示）
+    async function copyText(text, btn) {
+      const orig = btn.textContent;
+      let ok = false;
+      try {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text; ta.style.cssText = "position:fixed;opacity:0";
+        document.body.appendChild(ta); ta.select();
+        try { ok = document.execCommand("copy"); } catch { ok = false; }
+        ta.remove();
+      }
+      btn.textContent = ok ? "✓ 已複製" : "✗ 複製失敗";
+      setTimeout(() => (btn.textContent = orig), 1800);
+    }
+
+    // 複製哩程表
+    document.getElementById("copyMilesBtn").addEventListener("click", (e) => {
+      const airlineObj = AIRLINES[state.airline];
+      const routeObj = ROUTES.find((r) => r.id === state.routeId);
+      if (!routeObj) return;
+
+      const tripLabel = state.multiplier === 2 ? "來回" : "單程";
+      const lines = [
+        `【${airlineObj.name}】${routeObj.origin} ↔ ${routeObj.dest}（${tripLabel}哩程試算）`,
+        `單程基本飛行哩程 (TPM)：${fmt(routeObj.tpm)} 哩`,
+        `----------------------------------------`
+      ];
+
+      airlineObj.tiers.forEach((t) => {
+        const miles = Math.round(routeObj.tpm * t.ratio * state.multiplier);
+        lines.push(`${t.cabin}｜${t.fare} (${t.rbd})：${Math.round(t.ratio * 100)}% → ${fmt(miles)} 哩`);
+      });
+
+      copyText(lines.join("\n"), e.currentTarget);
+    });
+
+    // 複製來回班表與機型艙等
+    document.getElementById("copyScheduleBtn").addEventListener("click", (e) => {
+      const airlineObj = AIRLINES[state.airline];
+      const routeObj = ROUTES.find((r) => r.id === state.routeId);
+      if (!routeObj) return;
+
+      const sched = routeObj.schedules?.[state.airline] || { out: [], in: [] };
+      const filteredOut = filterFlights(sched.out);
+      const filteredIn = filterFlights(sched.in);
+      const dayNames = ["", "一", "二", "三", "四", "五", "六", "日"];
+      const formatDays = (arr) => arr.length === 7 ? "每日飛航" : "每週" + arr.map((d) => dayNames[d]).join("、");
+      const formatCabins = (ac) => getAircraftCabins(state.airline, ac).map((c) => c.name).join("/");
+
+      const lines = [
+        `【${airlineObj.name}】${routeObj.origin} ↔ ${routeObj.dest} 直飛時刻表`,
+        `----------------------------------------`,
+        `▶ 去程 (${routeObj.origin} → ${routeObj.dest})：`
+      ];
+      filteredOut.forEach((f) => {
+        lines.push(`  ${f.no}｜${f.dep} - ${f.arr}${f.arrNext ? "(+1)" : ""}｜${f.aircraft} (${formatCabins(f.aircraft)})｜${formatDays(f.days)}`);
+      });
+      lines.push(`\n◀ 回程 (${routeObj.dest} → ${routeObj.origin})：`);
+      filteredIn.forEach((f) => {
+        lines.push(`  ${f.no}｜${f.dep} - ${f.arr}${f.arrNext ? "(+1)" : ""}｜${f.aircraft} (${formatCabins(f.aircraft)})｜${formatDays(f.days)}`);
+      });
+
+      copyText(lines.join("\n"), e.currentTarget);
+    });
+
+    // 初始化
+    renderRouteDropdown();
+    renderAll();
+  </script>
+</body>
+</html>
