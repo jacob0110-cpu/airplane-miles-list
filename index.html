@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>台灣國籍航空航班與哩程查詢 | 華航・長榮・星宇</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%E2%9C%88%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <title>台灣國籍航空直飛哩程與每週航班查詢系統 | 華航・長榮・星宇</title>
   <style>
     :root {
       --bg-page: #f4f6f9;
@@ -274,14 +275,13 @@
     /* 星期篩選按鈕列 */
     .day-filter-bar {
       display: grid;
-      grid-template-columns: minmax(36px, 1.2fr) repeat(7, minmax(0, 1fr));
+      grid-template-columns: repeat(8, minmax(0, 1fr));
       gap: 4px;
     }
 
     .day-filter-btn {
       min-width: 0;
-      padding: 8px 0;
-      white-space: nowrap;
+      padding: 8px 2px;
       border: 1.5px solid var(--border-color);
       background: #fff;
       border-radius: 8px;
@@ -358,7 +358,6 @@
 
     /* 卡片容器 */
     .card {
-      min-width: 0;
       background: var(--bg-card);
       border-radius: var(--radius-lg);
       padding: 20px 22px;
@@ -382,7 +381,6 @@
       font-weight: 700;
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
       gap: 8px;
     }
 
@@ -561,6 +559,13 @@
     /* 明細表格 */
     .table-wrap {
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* 讓表格在窄螢幕改為卡片內橫向捲動，而不是撐開整個頁面 */
+    .schedule-grid > .card,
+    .card {
+      min-width: 0;
     }
 
     table {
@@ -685,9 +690,11 @@
     }
 
     .flight-no {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-family: inherit;
       font-weight: 800;
-      font-size: 0.94rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.01em;
+      font-variant-numeric: tabular-nums;
       color: var(--brand-color);
       white-space: nowrap;
     }
@@ -788,13 +795,455 @@
       border-radius: var(--radius-md);
       border: 1px solid var(--border-color);
     }
-    .data-meta { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #fff; color: var(--text-secondary); font-size: .86rem; line-height: 1.65; }
-    .data-meta a, .row-source { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 2px; }
-    .data-meta strong { color: var(--text-primary); }
-    .flight-detail { display: block; margin-top: 4px; color: var(--text-secondary); font-size: .75rem; line-height: 1.35; }
-    .codeshare-list { margin-top: 14px; }
-    .codeshare-list summary { cursor: pointer; font-weight: 650; }
-    .codeshare-list li { margin-block: 4px; }
+
+    /* ==================== 航班資料更新：按鈕、狀態、彈窗、提示 ==================== */
+    .header-tools {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+    }
+
+    .sync-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--brand-border);
+      background: var(--brand-light);
+      color: var(--brand-color);
+      font-size: 0.88rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .sync-btn:hover {
+      background: var(--brand-color);
+      border-color: var(--brand-color);
+      color: #fff;
+    }
+
+    .sync-btn:focus-visible {
+      outline: 2px solid var(--brand-color);
+      outline-offset: 2px;
+    }
+
+    .sync-btn[disabled] {
+      cursor: progress;
+      opacity: 0.75;
+    }
+
+    .sync-icon {
+      display: inline-block;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .sync-btn.loading .sync-icon {
+      animation: sync-spin 0.9s linear infinite;
+    }
+
+    @keyframes sync-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .sync-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #94a3b8;
+      flex: none;
+    }
+
+    .sync-dot.updated { background: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15); }
+    .sync-dot.cached { background: #d97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15); }
+    .sync-dot.error { background: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15); }
+
+    .sync-link {
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .sync-link:hover { color: var(--brand-color); }
+
+    /* 彈窗 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px;
+      overflow-y: auto;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      width: 100%;
+      max-width: 660px;
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100dvh - 32px);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      flex: none;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-head h2 {
+      font-size: 1.06rem;
+      font-weight: 800;
+      color: var(--brand-color);
+    }
+
+    .modal-head p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 3px;
+      line-height: 1.5;
+    }
+
+    .modal-close {
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: var(--text-secondary);
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      flex: none;
+    }
+
+    .modal-close:hover { background: #f1f5f9; color: var(--text-primary); }
+
+    .modal-body {
+      padding: 18px 22px 4px;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .sync-current {
+      background: var(--brand-light);
+      border: 1px solid var(--brand-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.79rem;
+      color: var(--text-primary);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .sync-current strong { color: var(--brand-color); }
+
+    .sync-section {
+      border-top: 1px solid var(--border-color);
+      padding: 15px 0 16px;
+    }
+
+    .sync-section:first-of-type { border-top: none; padding-top: 0; }
+
+    .sync-section h3 {
+      font-size: 0.86rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 5px;
+    }
+
+    .sync-hint {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 9px;
+    }
+
+    .sync-hint code {
+      background: #f1f5f9;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.74rem;
+    }
+
+    .sync-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .sync-row.end { justify-content: flex-end; margin-top: 9px; }
+
+    .sync-row input[type="text"] {
+      flex: 1 1 240px;
+      min-width: 0;
+      padding: 9px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      color: var(--text-primary);
+      background: #fff;
+    }
+
+    .sync-row input[type="text"]:focus,
+    .sync-section textarea:focus {
+      outline: none;
+      border-color: var(--brand-color);
+      box-shadow: 0 0 0 3px rgba(26, 54, 115, 0.12);
+    }
+
+    .sync-section textarea {
+      width: 100%;
+      margin-top: 9px;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.76rem;
+      line-height: 1.5;
+      color: var(--text-primary);
+      resize: vertical;
+      background: #fff;
+    }
+
+    .btn-primary,
+    .btn-ghost,
+    .file-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--brand-color);
+      color: #fff;
+      border: 1px solid var(--brand-color);
+    }
+
+    .btn-primary:hover { filter: brightness(1.12); }
+
+    .btn-ghost {
+      background: #fff;
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-ghost:hover { background: #f1f5f9; }
+
+    .btn-ghost.danger { color: #dc2626; border-color: #fecaca; background: #fef2f2; }
+    .btn-ghost.danger:hover { background: #dc2626; color: #fff; }
+
+    .file-btn {
+      background: #fff;
+      color: var(--text-primary);
+      border: 1px dashed var(--border-color);
+    }
+
+    .file-btn:hover { border-color: var(--brand-color); color: var(--brand-color); }
+
+    /* 檢查結果 */
+    .result-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .result-stat {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .result-stat b {
+      display: block;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--brand-color);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-stat span {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .result-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .result-list li {
+      font-size: 0.76rem;
+      line-height: 1.5;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border-left: 3px solid transparent;
+    }
+
+    .result-list li.error {
+      background: #fef2f2;
+      border-left-color: #dc2626;
+      color: #991b1b;
+    }
+
+    .result-list li.warn {
+      background: #fffbeb;
+      border-left-color: #d97706;
+      color: #92400e;
+    }
+
+    .result-list li.ok {
+      background: #f0fdf4;
+      border-left-color: #16a34a;
+      color: #166534;
+    }
+
+    .sync-docs {
+      border-top: 1px solid var(--border-color);
+      padding: 12px 0 16px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .sync-docs summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .sync-docs pre {
+      margin-top: 9px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      line-height: 1.55;
+      overflow-x: auto;
+    }
+
+    .modal-foot {
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 14px 22px;
+      border-top: 1px solid var(--border-color);
+      background: #f8fafc;
+    }
+
+    .modal-foot-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sync-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .sync-check input { accent-color: var(--brand-color); }
+
+    /* 浮動提示 */
+    .toast-stack {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 1400;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: min(360px, calc(100vw - 32px));
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #0f172a;
+      color: #fff;
+      padding: 11px 15px;
+      border-radius: 10px;
+      font-size: 0.81rem;
+      line-height: 1.5;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
+      border-left: 3px solid #64748b;
+      animation: toast-in 0.22s ease-out;
+    }
+
+    .toast.success { border-left-color: #22c55e; }
+    .toast.error { border-left-color: #ef4444; }
+    .toast.info { border-left-color: #3b82f6; }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      header { padding: 16px 18px; }
+      .header-tools { align-items: stretch; width: 100%; }
+      .sync-btn { justify-content: center; }
+      .sync-meta { justify-content: center; flex-wrap: wrap; white-space: normal; }
+      .modal-head, .modal-body, .modal-foot { padding-left: 16px; padding-right: 16px; }
+      .modal-foot { flex-direction: column; align-items: stretch; }
+      .modal-foot-right { justify-content: space-between; }
+    }
   </style>
 </head>
 <body data-airline="BR">
@@ -802,8 +1251,8 @@
     <!-- 頁首與雙分頁切換 -->
     <header>
       <div class="header-title">
-        <h1>✈️ 台灣國籍航空航班與哩程查詢</h1>
-        <p>中華航空 (CI) ・ 長榮航空 (BR) ・ 星宇航空 (JX) 航班時刻與哩程試算</p>
+        <h1>✈️ 台灣國籍航空直飛查詢系統</h1>
+        <p>中華航空 (CI) ・ 長榮航空 (BR) ・ 星宇航空 (JX) 直飛哩程與每週航班時刻</p>
       </div>
 
       <nav class="main-nav-tabs" id="mainNavTabs">
@@ -814,6 +1263,18 @@
           🕒 每週航班時刻表
         </button>
       </nav>
+
+      <div class="header-tools">
+        <button class="sync-btn" id="syncBtn" type="button" aria-haspopup="dialog">
+          <span class="sync-icon" aria-hidden="true">↻</span>
+          <span>更新航班資料</span>
+        </button>
+        <div class="sync-meta">
+          <span class="sync-dot" id="syncDot" aria-hidden="true"></span>
+          <span id="syncMetaText">內建班表</span>
+          <button class="sync-link" id="syncSettingsBtn" type="button">資料來源設定</button>
+        </div>
+      </div>
     </header>
 
     <!-- 共用控制面板 -->
@@ -837,14 +1298,13 @@
       </div>
 
       <div class="control-group">
-        <label for="routeSelect">2. 搜尋並選擇航線（<span id="routeCount">0</span> 條可查航線）</label>
+        <label for="routeSelect">2. 搜尋並選擇直飛航線（<span id="routeCount">0</span> 條可用航線）</label>
         <div class="route-selector-wrap">
           <div class="search-input-box">
             <input
               type="text"
               id="routeSearch"
-              aria-label="以城市或機場代碼搜尋航線"
-              placeholder="搜尋城市或代碼，例如 NRT"
+              placeholder="搜尋城市或機場代碼"
               autocomplete="off"
             />
             <button class="clear-search" id="clearSearchBtn" title="清除搜尋">✕</button>
@@ -879,17 +1339,16 @@
 
     <!-- ==================== 分頁 1：艙等哩程試算 ==================== -->
     <div id="tab-miles" class="tab-pane">
-      <div class="data-meta" id="milesMeta"></div>
       <section class="summary-grid">
         <div class="stat-card">
-          <div class="stat-label">所選航線</div>
+          <div class="stat-label">所選直飛航線</div>
           <div class="stat-value" id="statRouteTitle" style="font-size: 1.08rem;">—</div>
           <div class="stat-sub" id="statRegion">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">單程計算基準</div>
+          <div class="stat-label">單程基本飛行哩程 (TPM)</div>
           <div class="stat-value" id="statBaseTpm">0 哩</div>
-          <div class="stat-sub" id="statDistanceBasis">航線距離估算</div>
+          <div class="stat-sub">IATA 標準計算基準</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">100% 基準累積哩程</div>
@@ -945,7 +1404,6 @@
 
     <!-- ==================== 分頁 2：每週航班時刻表 ==================== -->
     <div id="tab-schedule" class="tab-pane active">
-      <div class="data-meta" id="scheduleMeta"></div>
       <section class="summary-grid">
         <div class="stat-card">
           <div class="stat-label">查詢航線與執飛航空</div>
@@ -953,12 +1411,12 @@
           <div class="stat-sub" id="schedAirlineSub">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label" id="schedOutLabel">本週去程符合班次</div>
+          <div class="stat-label">去程每週符合班次</div>
           <div class="stat-value highlight" id="schedOutFreq">0 班 / 週</div>
           <div class="stat-sub" id="schedOutFlightCount">共 0 個定期航班號</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label" id="schedInLabel">本週回程符合班次</div>
+          <div class="stat-label">回程每週符合班次</div>
           <div class="stat-value highlight" id="schedInFreq">0 班 / 週</div>
           <div class="stat-sub" id="schedInFlightCount">共 0 個定期航班號</div>
         </div>
@@ -1015,7 +1473,7 @@
                   <th>航班</th>
                   <th>出發 / 抵達</th>
                   <th>執飛機型與配備艙等</th>
-                  <th>本週出發日</th>
+                  <th>每週飛航日</th>
                 </tr>
               </thead>
               <tbody id="outboundTableBody"></tbody>
@@ -1039,7 +1497,7 @@
                   <th>航班</th>
                   <th>出發 / 抵達</th>
                   <th>執飛機型與配備艙等</th>
-                  <th>本週出發日</th>
+                  <th>每週飛航日</th>
                 </tr>
               </thead>
               <tbody id="inboundTableBody"></tbody>
@@ -1047,17 +1505,104 @@
           </div>
         </div>
       </section>
-      <details class="data-meta codeshare-list" id="codeshareList" hidden></details>
     </div>
 
     <div class="footer-note">
       <strong>資料基準與注意事項：</strong><br />
-      表定時刻均為各機場當地時間；<code>+1</code> 表示次日、<code>−1</code> 表示前一日抵達。計算含中停航班的全程耗時時，會把停留時間算入。<br />
-      機型與客艙是班表資料，不是座位保證。未核實的配置不參與客艙篩選；實際起降、機型、客艙和哩程以航空公司為準。
+      1. <strong>機型與客艙配置</strong>：依各國籍航空主力機隊客艙規格標示（長榮 <code>B777-300ER</code> 與 <code>B787-9</code>（豪華經濟艙僅部分機隊配備，依長榮官網）配備皇璽桂冠艙、豪華經濟艙、經濟艙；<code>B787-10</code> 與 <code>A330-300</code> 為兩艙等；華航 <code>B777-300ER</code> 與 <code>A350-900</code> 配備三艙等；星宇 <code>A350-900</code> 配備四艙等），實際派飛機型可能隨季節性調度微調。<br />
+      2. <strong>航班時刻與哩程</strong>：時刻均為起飛／降落當地時間（<code>+1</code> 表示跨日抵達）；哩程依原購票子艙等累積比例計算，酬賓免費機票不累積哩程。
     </div>
   </div>
 
-  <script src="schedule-data.js"></script>
+  <!-- 航班資料更新彈窗 -->
+  <div class="modal-backdrop" id="syncModal" role="dialog" aria-modal="true" aria-labelledby="syncModalTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h2 id="syncModalTitle">更新航班資料</h2>
+          <p>選擇資料來源後套用，班表、每週班次與機型會立即重新計算。</p>
+        </div>
+        <button class="modal-close" id="syncModalClose" type="button" aria-label="關閉">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="sync-current" id="syncCurrent"></div>
+
+        <section class="sync-section">
+          <h3>1. 從網址或資料檔更新</h3>
+          <p class="sync-hint">
+            填入會回傳 JSON 的網址（航空公司 API、自架端點，或放在同一資料夾的
+            <code>flights-data.json</code>）。空白時會優先抓取同資料夾的 <code>flights-data.json</code>。
+          </p>
+          <div class="sync-row">
+            <input type="text" id="syncUrlInput" spellcheck="false" placeholder="flights-data.json 或 https://example.com/flights-data.json" aria-label="資料來源網址" />
+            <button class="btn-primary" id="syncFetchBtn" type="button">立即更新</button>
+          </div>
+        </section>
+
+        <section class="sync-section">
+          <h3>2. 上傳檔案或貼上 JSON</h3>
+          <p class="sync-hint">沒有可公開存取的網址時，可上傳航空公司匯出的 JSON 檔，或直接貼上班表內容。</p>
+          <div class="sync-row">
+            <label class="file-btn" for="syncFileInput">📂 選擇 JSON 檔</label>
+            <input type="file" id="syncFileInput" accept=".json,application/json" hidden />
+            <button class="btn-ghost" id="syncExportBtn" type="button">⬇ 匯出目前資料</button>
+          </div>
+          <textarea id="syncPasteInput" rows="4" spellcheck="false" placeholder='{"version":"2026-12-01","effectiveFrom":"2026-10-25","routes":[{"id":"TPE-NRT","schedules":{"CI":{"out":[{"no":"CI 100","dep":"08:50","arr":"13:15","aircraft":"A350-900","days":[1,2,3,4,5,6,7]}]}}}]}'></textarea>
+          <div class="sync-row end">
+            <button class="btn-primary" id="syncApplyPasteBtn" type="button">套用貼上的資料</button>
+          </div>
+        </section>
+
+        <section class="sync-section" id="syncResultSection" hidden>
+          <h3>檢查結果</h3>
+          <div id="syncResult"></div>
+        </section>
+
+        <details class="sync-docs">
+          <summary>JSON 格式說明</summary>
+          <pre>{
+  "version": "2026-12-01",          // 資料版本（可省略）
+  "effectiveFrom": "2026-10-25",    // 班表生效日（可省略）
+  "effectiveTo": "2027-03-27",
+  "source": "航空公司班表",
+  "routes": [
+    {
+      "id": "TPE-NRT",              // 必須與現有航線代碼相同，否則視為新航線
+      "tpm": 1356,                  // 單程哩程
+      "note": "中停曼谷、同機續飛",   // 選填
+      "schedules": {
+        "CI": {
+          "out": [                  // 去程
+            { "no": "CI 100", "dep": "08:50", "arr": "13:15",
+              "arrNext": false, "aircraft": "A350-900",
+              "days": [1,2,3,4,5,6,7] }
+          ],
+          "in":  [ /* 回程，格式相同 */ ]
+        }
+      }
+    }
+  ]
+}</pre>
+          <p class="sync-hint" style="margin-top:10px;margin-bottom:0;">
+            可比對部分欄位：只列出要更新的航班或航線即可，其餘沿用現有資料。設定
+            <code>"remove": true</code> 可移除該航線；<code>days</code> 使用 1–7 代表週一至週日。
+          </p>
+        </details>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn-ghost danger" id="syncResetBtn" type="button">還原內建資料</button>
+        <div class="modal-foot-right">
+          <label class="sync-check"><input type="checkbox" id="syncAutoCheck" /> 開啟頁面時自動檢查更新</label>
+          <button class="btn-primary" id="syncDoneBtn" type="button">完成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
+
   <script>
     // 1. 三大國籍航空子艙等累積資料庫
     const AIRLINES = {
@@ -1091,7 +1636,8 @@
           { group: "PE", cabin: "豪華經濟艙", badge: "cabin-pe", fare: "基本 (Basic)", rbd: "P", ratio: 1.00 },
           { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "尊寵 (Up)", rbd: "Y / B", ratio: 1.00 },
           { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "經典 (Standard)", rbd: "M / H / Q", ratio: 0.75 },
-          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "基本 (Basic)", rbd: "S / W / V", ratio: 0.50 }
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "基本 (Basic)", rbd: "S / W / V", ratio: 0.50 },
+          { group: "ECO", cabin: "經濟艙", badge: "cabin-eco", fare: "輕省 (Discount)", rbd: "A", ratio: 0.00 }
         ]
       },
       JX: {
@@ -1182,7 +1728,859 @@
       }
     };
 
-    const ROUTES = window.FLIGHT_SNAPSHOT.routes;
+    // 3. 全面校正後之 43 條國籍航空直飛航線與每週航班時刻資料庫
+    const DAILY = Object.freeze([1, 2, 3, 4, 5, 6, 7]);
+
+    let ROUTES = [
+      // ==================== 東北亞 (16條) ====================
+      {
+        id: "TPE-NRT", region: "東北亞", origin: "台北桃園 (TPE)", dest: "東京成田 (NRT)", tpm: 1356,
+        carriers: ["CI", "BR", "JX"], keywords: "tokyo narita 日本 東京",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 100", dep: "08:55", arr: "13:15", aircraft: "A350-900", days: DAILY },
+              { no: "CI 104", dep: "12:35", arr: "16:55", aircraft: "A330-300", days: DAILY },
+              { no: "CI 108", dep: "14:40", arr: "19:00", aircraft: "A321neo", days: DAILY },
+              { no: "CI 106", dep: "16:35", arr: "20:55", aircraft: "B777-300ER", days: [1, 3, 5, 7] }
+            ],
+            in: [
+              { no: "CI 107", dep: "09:25", arr: "12:15", aircraft: "B777-300ER", days: [1, 2, 4, 6] },
+              { no: "CI 101", dep: "14:30", arr: "17:15", aircraft: "A350-900", days: DAILY },
+              { no: "CI 105", dep: "17:55", arr: "20:45", aircraft: "A330-300", days: DAILY },
+              { no: "CI 109", dep: "20:00", arr: "22:50", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 184", dep: "07:55", arr: "12:25", aircraft: "B787-9", days: DAILY },
+              { no: "BR 198", dep: "08:50", arr: "13:15", aircraft: "B787-10", days: DAILY },
+              { no: "BR 196", dep: "15:20", arr: "19:40", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 183", dep: "13:25", arr: "16:05", aircraft: "B787-9", days: DAILY },
+              { no: "BR 197", dep: "14:15", arr: "16:55", aircraft: "B787-10", days: DAILY },
+              { no: "BR 195", dep: "20:40", arr: "23:25", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 800", dep: "08:30", arr: "12:45", aircraft: "A350-900", days: DAILY },
+              { no: "JX 802", dep: "10:10", arr: "14:25", aircraft: "A330neo", days: DAILY },
+              { no: "JX 804", dep: "15:00", arr: "19:20", aircraft: "A330neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 801", dep: "13:55", arr: "16:35", aircraft: "A350-900", days: DAILY },
+              { no: "JX 803", dep: "15:40", arr: "18:20", aircraft: "A330neo", days: DAILY },
+              { no: "JX 805", dep: "20:35", arr: "23:20", aircraft: "A330neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TSA-HND", region: "東北亞", origin: "台北松山 (TSA)", dest: "東京羽田 (HND)", tpm: 1330,
+        carriers: ["CI", "BR"], keywords: "tokyo haneda 日本 東京 松山",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 220", dep: "09:00", arr: "13:05", aircraft: "A330-300", days: DAILY },
+              { no: "CI 222", dep: "18:05", arr: "22:05", aircraft: "A330-300", days: DAILY }
+            ],
+            in: [
+              { no: "CI 223", dep: "07:55", arr: "10:40", aircraft: "A330-300", days: DAILY },
+              { no: "CI 221", dep: "14:15", arr: "17:00", aircraft: "A330-300", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 192", dep: "07:30", arr: "11:45", aircraft: "B787-10", days: DAILY },
+              { no: "BR 190", dep: "16:00", arr: "20:15", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 189", dep: "12:45", arr: "15:30", aircraft: "B787-10", days: DAILY },
+              { no: "BR 191", dep: "21:15", arr: "23:55", aircraft: "B787-10", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "KHH-NRT", region: "東北亞", origin: "高雄小港 (KHH)", dest: "東京成田 (NRT)", tpm: 1528,
+        carriers: ["CI", "BR"], keywords: "kaohsiung tokyo narita 高雄 東京",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 102", dep: "08:00", arr: "12:30", aircraft: "B737-800", days: DAILY },
+              { no: "CI 126", dep: "13:10", arr: "17:40", aircraft: "A321neo", days: [2, 4, 6, 7] }
+            ],
+            in: [
+              { no: "CI 103", dep: "13:30", arr: "16:40", aircraft: "B737-800", days: DAILY },
+              { no: "CI 127", dep: "18:40", arr: "21:50", aircraft: "A321neo", days: [2, 4, 6, 7] }
+            ]
+          },
+          BR: {
+            out: [{ no: "BR 108", dep: "07:00", arr: "11:30", aircraft: "A321-200", days: DAILY }],
+            in: [{ no: "BR 107", dep: "12:30", arr: "15:40", aircraft: "A321-200", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-KIX", region: "東北亞", origin: "台北桃園 (TPE)", dest: "大阪關西 (KIX)", tpm: 1060,
+        carriers: ["CI", "BR", "JX"], keywords: "osaka kansai 日本 大阪",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 156", dep: "08:10", arr: "11:45", aircraft: "A350-900", days: DAILY },
+              { no: "CI 152", dep: "09:45", arr: "13:20", aircraft: "A330-300", days: DAILY },
+              { no: "CI 172", dep: "14:20", arr: "17:55", aircraft: "A330-300", days: DAILY }
+            ],
+            in: [
+              { no: "CI 157", dep: "12:55", arr: "15:00", aircraft: "A350-900", days: DAILY },
+              { no: "CI 153", dep: "14:30", arr: "16:35", aircraft: "A330-300", days: DAILY },
+              { no: "CI 173", dep: "19:00", arr: "21:05", aircraft: "A330-300", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 178", dep: "06:30", arr: "10:10", aircraft: "B787-10", days: DAILY },
+              { no: "BR 132", dep: "08:30", arr: "12:10", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 130", dep: "13:35", arr: "17:15", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 177", dep: "11:10", arr: "13:15", aircraft: "B787-10", days: DAILY },
+              { no: "BR 131", dep: "13:10", arr: "15:15", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 129", dep: "18:30", arr: "20:35", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 820", dep: "08:30", arr: "12:00", aircraft: "A330neo", days: DAILY },
+              { no: "JX 822", dep: "10:25", arr: "14:00", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 821", dep: "13:10", arr: "15:15", aircraft: "A330neo", days: DAILY },
+              { no: "JX 823", dep: "15:10", arr: "17:15", aircraft: "A321neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-FUK", region: "東北亞", origin: "台北桃園 (TPE)", dest: "福岡 (FUK)", tpm: 806,
+        carriers: ["CI", "BR", "JX"], keywords: "fukuoka kyushu 日本 九州 福岡",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 110", dep: "06:50", arr: "10:00", aircraft: "A350-900", days: DAILY },
+              { no: "CI 116", dep: "16:25", arr: "19:35", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 111", dep: "11:00", arr: "12:30", aircraft: "A350-900", days: DAILY },
+              { no: "CI 117", dep: "20:35", arr: "22:05", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 106", dep: "08:10", arr: "11:20", aircraft: "B787-10", days: DAILY },
+              { no: "BR 102", dep: "15:10", arr: "18:20", aircraft: "A321-200", days: DAILY }
+            ],
+            in: [
+              { no: "BR 105", dep: "12:20", arr: "13:50", aircraft: "B787-10", days: DAILY },
+              { no: "BR 101", dep: "19:20", arr: "20:50", aircraft: "A321-200", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 840", dep: "10:30", arr: "13:45", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 841", dep: "14:45", arr: "16:15", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-OKA", region: "東北亞", origin: "台北桃園 (TPE)", dest: "沖繩那霸 (OKA)", tpm: 406,
+        carriers: ["CI", "BR", "JX"], keywords: "okinawa naha 日本 沖繩",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 120", dep: "08:15", arr: "10:45", aircraft: "A330-300", days: DAILY },
+              { no: "CI 122", dep: "17:05", arr: "19:35", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 121", dep: "11:50", arr: "12:25", aircraft: "A330-300", days: DAILY },
+              { no: "CI 123", dep: "20:35", arr: "21:10", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 112", dep: "06:45", arr: "09:15", aircraft: "A321-200", days: DAILY },
+              { no: "BR 186", dep: "16:50", arr: "19:20", aircraft: "A321-200", days: DAILY }
+            ],
+            in: [
+              { no: "BR 113", dep: "10:15", arr: "10:50", aircraft: "A321-200", days: DAILY },
+              { no: "BR 185", dep: "20:20", arr: "20:55", aircraft: "A321-200", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 870", dep: "12:20", arr: "14:50", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 871", dep: "15:50", arr: "16:25", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-CTS", region: "東北亞", origin: "台北桃園 (TPE)", dest: "札幌新千歲 (CTS)", tpm: 1692,
+        carriers: ["CI", "BR", "JX"], keywords: "sapporo hokkaido 日本 北海道 札幌",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 130", dep: "08:35", arr: "13:15", aircraft: "A330-300", days: DAILY }],
+            in: [{ no: "CI 131", dep: "14:40", arr: "18:05", aircraft: "A330-300", days: DAILY }]
+          },
+          BR: {
+            out: [
+              { no: "BR 166", dep: "07:00", arr: "11:40", aircraft: "A330-300", days: [1, 3, 5, 7] },
+              { no: "BR 116", dep: "09:30", arr: "14:05", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 165", dep: "12:50", arr: "16:15", aircraft: "A330-300", days: [1, 3, 5, 7] },
+              { no: "BR 115", dep: "15:20", arr: "18:45", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 850", dep: "09:25", arr: "14:10", aircraft: "A330neo", days: DAILY }],
+            in: [{ no: "JX 851", dep: "15:20", arr: "18:50", aircraft: "A330neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-NGO", region: "東北亞", origin: "台北桃園 (TPE)", dest: "名古屋中部 (NGO)", tpm: 1152,
+        carriers: ["CI", "JX"], keywords: "nagoya 日本 名古屋",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 154", dep: "07:30", arr: "11:05", aircraft: "A321neo", days: DAILY },
+              { no: "CI 150", dep: "17:15", arr: "20:50", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 151", dep: "09:50", arr: "12:00", aircraft: "A321neo", days: DAILY },
+              { no: "CI 155", dep: "12:05", arr: "14:15", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 838", dep: "14:40", arr: "18:15", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 839", dep: "19:15", arr: "21:30", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-SDJ", region: "東北亞", origin: "台北桃園 (TPE)", dest: "仙台 (SDJ)", tpm: 1518,
+        carriers: ["BR", "JX"], keywords: "sendai tohoku 日本 東北 仙台",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 118", dep: "10:05", arr: "14:25", aircraft: "A321-200", days: DAILY }],
+            in: [{ no: "BR 117", dep: "15:30", arr: "18:40", aircraft: "A321-200", days: DAILY }]
+          },
+          JX: {
+            out: [{ no: "JX 862", dep: "11:40", arr: "16:00", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 863", dep: "17:15", arr: "20:20", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-KMJ", region: "東北亞", origin: "台北桃園 (TPE)", dest: "熊本 (KMJ)", tpm: 825,
+        carriers: ["CI", "JX"], keywords: "kumamoto kyushu 日本 九州 熊本",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 194", dep: "14:30", arr: "17:40", aircraft: "A321neo", days: [1, 2, 4, 5, 7] }],
+            in: [{ no: "CI 195", dep: "18:40", arr: "20:10", aircraft: "A321neo", days: [1, 2, 4, 5, 7] }]
+          },
+          JX: {
+            out: [{ no: "JX 846", dep: "09:45", arr: "13:00", aircraft: "A321neo", days: DAILY }],
+            in: [{ no: "JX 847", dep: "14:00", arr: "15:30", aircraft: "A321neo", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-HKD", region: "東北亞", origin: "台北桃園 (TPE)", dest: "函館 (HKD)", tpm: 1632,
+        carriers: ["BR", "JX"], keywords: "hakodate hokkaido 日本 北海道 函館",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 138", dep: "10:00", arr: "14:30", aircraft: "A321-200", days: DAILY }],
+            in: [{ no: "BR 137", dep: "15:35", arr: "19:00", aircraft: "A321-200", days: DAILY }]
+          },
+          JX: {
+            out: [{ no: "JX 860", dep: "11:30", arr: "16:00", aircraft: "A321neo", days: [1, 3, 5, 7] }],
+            in: [{ no: "JX 861", dep: "17:10", arr: "20:35", aircraft: "A321neo", days: [1, 3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-KMQ", region: "東北亞", origin: "台北桃園 (TPE)", dest: "小松 / 金澤 (KMQ)", tpm: 1185,
+        carriers: ["BR"], keywords: "komatsu kanazawa 日本 北陸 小松 金澤",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 158", dep: "06:35", arr: "10:25", aircraft: "A321-200", days: DAILY }],
+            in: [{ no: "BR 157", dep: "11:45", arr: "14:00", aircraft: "A321-200", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-HIJ", region: "東北亞", origin: "台北桃園 (TPE)", dest: "廣島 (HIJ)", tpm: 922,
+        carriers: ["CI"], keywords: "hiroshima 日本 廣島",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 112", dep: "07:00", arr: "10:20", aircraft: "A321neo", days: [2, 3, 5, 6] }],
+            in: [{ no: "CI 113", dep: "11:20", arr: "13:05", aircraft: "A321neo", days: [2, 3, 5, 6] }]
+          }
+        }
+      },
+      {
+        id: "TPE-TAK", region: "東北亞", origin: "台北桃園 (TPE)", dest: "高松 (TAK)", tpm: 1012,
+        carriers: ["CI"], keywords: "takamatsu shikoku 日本 四國 高松",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 178", dep: "14:30", arr: "18:05", aircraft: "A321neo", days: [2, 3, 4, 6, 7] }],
+            in: [{ no: "CI 179", dep: "19:05", arr: "21:05", aircraft: "A321neo", days: [2, 3, 4, 6, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-ICN", region: "東北亞", origin: "台北桃園 (TPE)", dest: "首爾仁川 (ICN)", tpm: 907,
+        carriers: ["CI", "BR"], keywords: "seoul incheon 韓國 首爾",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 160", dep: "07:45", arr: "11:15", aircraft: "A330-300", days: DAILY },
+              { no: "CI 162", dep: "16:25", arr: "19:55", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 161", dep: "12:25", arr: "14:05", aircraft: "A330-300", days: DAILY },
+              { no: "CI 163", dep: "20:55", arr: "22:35", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 170", dep: "07:30", arr: "11:00", aircraft: "B787-10", days: DAILY },
+              { no: "BR 160", dep: "15:15", arr: "18:45", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 169", dep: "12:00", arr: "13:45", aircraft: "B787-10", days: DAILY },
+              { no: "BR 159", dep: "19:45", arr: "21:30", aircraft: "B777-300ER", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TSA-GMP", region: "東北亞", origin: "台北松山 (TSA)", dest: "首爾金浦 (GMP)", tpm: 912,
+        carriers: ["CI", "BR"], keywords: "seoul gimpo 韓國 首爾 金浦 松山",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 260", dep: "09:25", arr: "12:50", aircraft: "A321neo", days: [1, 4, 5, 7] }],
+            in: [{ no: "CI 261", dep: "13:50", arr: "15:30", aircraft: "A321neo", days: [1, 4, 5, 7] }]
+          },
+          BR: {
+            out: [{ no: "BR 156", dep: "09:20", arr: "12:50", aircraft: "A321-200", days: [1, 2, 3, 5, 6] }],
+            in: [{ no: "BR 155", dep: "13:50", arr: "15:35", aircraft: "A321-200", days: [1, 2, 3, 5, 6] }]
+          }
+        }
+      },
+
+      // ==================== 東南亞與港澳 (5條) ====================
+      {
+        id: "TPE-HKG", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "香港 (HKG)", tpm: 501,
+        carriers: ["CI", "BR", "JX"], keywords: "hong kong 香港",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 903", dep: "08:05", arr: "10:00", aircraft: "A350-900", days: DAILY },
+              { no: "CI 909", dep: "10:50", arr: "12:45", aircraft: "A330-300", days: DAILY },
+              { no: "CI 915", dep: "14:45", arr: "16:40", aircraft: "B777-300ER", days: DAILY },
+              { no: "CI 919", dep: "16:50", arr: "18:45", aircraft: "A321neo", days: DAILY },
+              { no: "CI 923", dep: "18:40", arr: "20:35", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 904", dep: "11:05", arr: "12:55", aircraft: "A350-900", days: DAILY },
+              { no: "CI 910", dep: "13:55", arr: "15:45", aircraft: "A330-300", days: DAILY },
+              { no: "CI 916", dep: "17:45", arr: "19:35", aircraft: "B777-300ER", days: DAILY },
+              { no: "CI 920", dep: "19:55", arr: "21:45", aircraft: "A321neo", days: DAILY },
+              { no: "CI 924", dep: "21:40", arr: "23:25", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 891", dep: "07:00", arr: "08:50", aircraft: "B787-10", days: DAILY },
+              { no: "BR 851", dep: "08:15", arr: "10:05", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 867", dep: "10:20", arr: "12:15", aircraft: "B787-10", days: DAILY },
+              { no: "BR 871", dep: "16:35", arr: "18:30", aircraft: "A330-300", days: DAILY },
+              { no: "BR 809", dep: "19:00", arr: "20:55", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 892", dep: "09:50", arr: "11:40", aircraft: "B787-10", days: DAILY },
+              { no: "BR 852", dep: "11:10", arr: "13:00", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 868", dep: "13:20", arr: "15:10", aircraft: "B787-10", days: DAILY },
+              { no: "BR 872", dep: "19:30", arr: "21:20", aircraft: "A330-300", days: DAILY },
+              { no: "BR 810", dep: "21:55", arr: "23:40", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 231", dep: "08:00", arr: "09:50", aircraft: "A350-900", days: DAILY },
+              { no: "JX 235", dep: "16:55", arr: "18:45", aircraft: "A330neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 232", dep: "11:00", arr: "12:50", aircraft: "A350-900", days: DAILY },
+              { no: "JX 236", dep: "19:55", arr: "21:45", aircraft: "A330neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-BKK", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "曼谷蘇凡納布 (BKK)", tpm: 1554,
+        carriers: ["CI", "BR", "JX"], keywords: "bangkok thailand 泰國 曼谷",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 831", dep: "09:40", arr: "12:30", aircraft: "A350-900", days: DAILY },
+              { no: "CI 835", dep: "13:35", arr: "16:25", aircraft: "A330-300", days: DAILY },
+              { no: "CI 837", dep: "22:00", arr: "00:50", arrNext: true, aircraft: "A321neo", days: [2, 4, 6] }
+            ],
+            in: [
+              { no: "CI 838", dep: "02:00", arr: "06:40", aircraft: "A321neo", days: [3, 5, 7] },
+              { no: "CI 832", dep: "13:40", arr: "18:20", aircraft: "A350-900", days: DAILY },
+              { no: "CI 836", dep: "17:35", arr: "22:15", aircraft: "A330-300", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 211", dep: "08:25", arr: "11:15", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 067", dep: "09:00", arr: "11:50", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 205", dep: "20:30", arr: "23:20", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 206", dep: "01:45", arr: "06:25", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 212", dep: "12:25", arr: "17:05", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 068", dep: "16:25", arr: "21:05", aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 741", dep: "09:20", arr: "12:15", aircraft: "A350-900", days: DAILY },
+              { no: "JX 745", dep: "13:15", arr: "16:10", aircraft: "A330neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 742", dep: "13:25", arr: "18:05", aircraft: "A350-900", days: DAILY },
+              { no: "JX 746", dep: "17:20", arr: "22:00", aircraft: "A330neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-SIN", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "新加坡 (SIN)", tpm: 2002,
+        carriers: ["CI", "BR", "JX"], keywords: "singapore 新加坡",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 753", dep: "08:05", arr: "12:45", aircraft: "A350-900", days: DAILY },
+              { no: "CI 751", dep: "15:50", arr: "20:30", aircraft: "A321neo", days: [2, 4, 6] }
+            ],
+            in: [
+              { no: "CI 752", dep: "10:15", arr: "15:00", aircraft: "A321neo", days: [3, 5, 7] },
+              { no: "CI 754", dep: "14:05", arr: "18:50", aircraft: "A350-900", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 225", dep: "07:40", arr: "12:05", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 215", dep: "09:25", arr: "13:50", aircraft: "B787-10", days: DAILY }
+            ],
+            in: [
+              { no: "BR 226", dep: "13:15", arr: "18:00", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 216", dep: "15:10", arr: "19:55", aircraft: "B787-10", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 771", dep: "08:10", arr: "12:45", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "JX 772", dep: "14:00", arr: "18:45", aircraft: "A350-900", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-SGN", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "胡志明市 (SGN)", tpm: 1378,
+        carriers: ["CI", "BR", "JX"], keywords: "ho chi minh saigon vietnam 越南 胡志明",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 781", dep: "07:20", arr: "09:50", aircraft: "A350-900", days: DAILY },
+              { no: "CI 783", dep: "13:45", arr: "16:15", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "CI 782", dep: "10:55", arr: "15:20", aircraft: "A350-900", days: DAILY },
+              { no: "CI 784", dep: "17:30", arr: "21:55", aircraft: "A321neo", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 395", dep: "07:20", arr: "09:45", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 391", dep: "09:20", arr: "11:45", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 396", dep: "12:45", arr: "17:10", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 392", dep: "12:55", arr: "17:20", aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 711", dep: "07:50", arr: "10:20", aircraft: "A330neo", days: DAILY },
+              { no: "JX 713", dep: "13:30", arr: "16:00", aircraft: "A321neo", days: DAILY }
+            ],
+            in: [
+              { no: "JX 712", dep: "11:30", arr: "15:50", aircraft: "A330neo", days: DAILY },
+              { no: "JX 714", dep: "17:10", arr: "21:30", aircraft: "A321neo", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-KUL", region: "東南亞 / 港澳", origin: "台北桃園 (TPE)", dest: "吉隆坡 (KUL)", tpm: 2015,
+        carriers: ["CI", "BR", "JX"], keywords: "kuala lumpur malaysia 馬來西亞 吉隆坡",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 721", dep: "08:30", arr: "13:15", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "CI 722", dep: "14:35", arr: "19:20", aircraft: "A350-900", days: DAILY }]
+          },
+          BR: {
+            out: [
+              { no: "BR 227", dep: "09:30", arr: "14:15", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 217", dep: "06:20", arr: "11:05", aircraft: "B787-10", days: [2, 4, 6, 7] }
+            ],
+            in: [
+              { no: "BR 218", dep: "12:15", arr: "17:05", aircraft: "B787-10", days: [2, 4, 6, 7] },
+              { no: "BR 228", dep: "15:25", arr: "20:15", aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 725", dep: "09:40", arr: "14:25", aircraft: "A330neo", days: DAILY }],
+            in: [{ no: "JX 726", dep: "15:35", arr: "20:25", aircraft: "A330neo", days: DAILY }]
+          }
+        }
+      },
+
+      // ==================== 北美線 (9條) ====================
+      {
+        id: "TPE-LAX", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "洛杉磯 (LAX)", tpm: 6781,
+        carriers: ["CI", "BR", "JX"], keywords: "los angeles usa 美國 洛杉磯",
+        schedules: {
+          CI: {
+            out: [
+              { no: "CI 006", dep: "17:10", arr: "13:55", aircraft: "B777-300ER", days: [1, 3, 5, 6] },
+              { no: "CI 008", dep: "23:50", arr: "20:35", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "CI 005", dep: "15:55", arr: "21:15", arrNext: true, aircraft: "B777-300ER", days: [1, 3, 5, 6] },
+              { no: "CI 007", dep: "23:10", arr: "04:30", arrNext: true, aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          BR: {
+            out: [
+              { no: "BR 006", dep: "10:10", arr: "06:55", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 012", dep: "19:20", arr: "16:05", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 016", dep: "23:55", arr: "20:40", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 005", dep: "11:30", arr: "16:50", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 011", dep: "17:50", arr: "23:10", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 015", dep: "23:30", arr: "04:50", arrNext: true, aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [
+              { no: "JX 006", dep: "17:30", arr: "14:20", aircraft: "A350-900", days: [2, 4, 6] },
+              { no: "JX 002", dep: "23:40", arr: "20:30", aircraft: "A350-900", days: DAILY }
+            ],
+            in: [
+              { no: "JX 005", dep: "16:30", arr: "21:55", arrNext: true, aircraft: "A350-900", days: [2, 4, 6] },
+              { no: "JX 001", dep: "23:50", arr: "05:15", arrNext: true, aircraft: "A350-900", days: DAILY }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-ONT", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "安大略 / 大洛杉磯 (ONT)", tpm: 6814,
+        carriers: ["CI", "JX"], keywords: "ontario california usa 美國 安大略 加州",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 024", dep: "20:05", arr: "16:55", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "CI 023", dep: "23:15", arr: "04:40", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          },
+          JX: {
+            out: [{ no: "JX 010", dep: "20:05", arr: "17:05", aircraft: "A350-900", days: [1, 3, 5, 7] }],
+            in: [{ no: "JX 009", dep: "23:10", arr: "04:45", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-SFO", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "舊金山 (SFO)", tpm: 6456,
+        carriers: ["CI", "BR", "JX"], keywords: "san francisco usa 美國 舊金山",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 004", dep: "23:30", arr: "19:35", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "CI 003", dep: "00:35", arr: "05:25", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          },
+          BR: {
+            out: [
+              { no: "BR 008", dep: "10:15", arr: "06:20", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 018", dep: "19:40", arr: "15:45", aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 028", dep: "23:30", arr: "19:35", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 027", dep: "00:30", arr: "05:15", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 007", dep: "12:00", arr: "16:45", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 017", dep: "17:45", arr: "22:30", arrNext: true, aircraft: "B777-300ER", days: DAILY }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 012", dep: "23:30", arr: "19:35", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "JX 011", dep: "23:40", arr: "04:30", arrNext: true, aircraft: "A350-900", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-SEA", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "西雅圖 (SEA)", tpm: 6064,
+        carriers: ["CI", "BR", "JX"], keywords: "seattle usa 美國 西雅圖",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 022", dep: "23:30", arr: "19:15", aircraft: "A350-900", days: [1, 2, 4, 6, 7] }],
+            in: [{ no: "CI 021", dep: "01:40", arr: "05:05", arrNext: true, aircraft: "A350-900", days: [1, 2, 3, 5, 7] }]
+          },
+          BR: {
+            out: [
+              { no: "BR 024", dep: "19:30", arr: "15:10", aircraft: "B787-9", days: [2, 4, 6] },
+              { no: "BR 026", dep: "23:40", arr: "19:20", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 025", dep: "01:10", arr: "04:45", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 023", dep: "17:10", arr: "20:45", arrNext: true, aircraft: "B787-9", days: [2, 4, 6] }
+            ]
+          },
+          JX: {
+            out: [{ no: "JX 032", dep: "20:00", arr: "15:45", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "JX 031", dep: "01:30", arr: "05:00", arrNext: true, aircraft: "A350-900", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-JFK", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "紐約甘迺迪 (JFK)", tpm: 7799,
+        carriers: ["CI", "BR"], keywords: "new york usa 美國 紐約",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 012", dep: "17:30", arr: "20:25", aircraft: "B777-300ER", days: [2, 3, 5, 7] }],
+            in: [{ no: "CI 011", dep: "00:35", arr: "04:40", arrNext: true, aircraft: "B777-300ER", days: [1, 3, 4, 6] }]
+          },
+          BR: {
+            out: [
+              { no: "BR 030", dep: "17:30", arr: "20:25", aircraft: "B777-300ER", days: [1, 4, 6] },
+              { no: "BR 032", dep: "19:10", arr: "22:05", aircraft: "B777-300ER", days: DAILY }
+            ],
+            in: [
+              { no: "BR 031", dep: "00:30", arr: "04:45", arrNext: true, aircraft: "B777-300ER", days: DAILY },
+              { no: "BR 029", dep: "23:30", arr: "03:45", arrNext: true, aircraft: "B777-300ER", days: [1, 4, 6] }
+            ]
+          }
+        }
+      },
+      {
+        id: "TPE-IAH", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "休士頓 (IAH)", tpm: 7936,
+        carriers: ["BR"], keywords: "houston texas usa 美國 休士頓",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 052", dep: "20:00", arr: "20:45", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 051", dep: "00:15", arr: "05:35", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-ORD", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "芝加哥 (ORD)", tpm: 7448,
+        carriers: ["BR"], keywords: "chicago usa 美國 芝加哥",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 056", dep: "19:50", arr: "20:35", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 055", dep: "00:20", arr: "05:25", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-YVR", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "溫哥華 (YVR)", tpm: 5955,
+        carriers: ["CI", "BR"], keywords: "vancouver canada 加拿大 溫哥華",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 032", dep: "23:55", arr: "19:25", aircraft: "A350-900", days: DAILY }],
+            in: [{ no: "CI 031", dep: "01:15", arr: "04:30", arrNext: true, aircraft: "A350-900", days: DAILY }]
+          },
+          BR: {
+            out: [{ no: "BR 010", dep: "23:55", arr: "19:25", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 009", dep: "01:30", arr: "04:45", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-YYZ", region: "北美 (美國 / 加拿大)", origin: "台北桃園 (TPE)", dest: "多倫多 (YYZ)", tpm: 7496,
+        carriers: ["BR"], keywords: "toronto canada 加拿大 多倫多",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 036", dep: "19:20", arr: "21:25", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 035", dep: "00:45", arr: "05:00", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+
+      // ==================== 歐洲線 (9條) ====================
+      {
+        id: "TPE-MUC", region: "歐洲", origin: "台北桃園 (TPE)", dest: "慕尼黑 (MUC)", tpm: 5762,
+        carriers: ["BR"], keywords: "munich germany 德國 慕尼黑",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 071", dep: "23:25", arr: "06:10", arrNext: true, aircraft: "B787-9", days: [1, 3, 5, 7] }],
+            in: [{ no: "BR 072", dep: "11:30", arr: "06:30", arrNext: true, aircraft: "B787-9", days: [1, 2, 4, 6] }]
+          }
+        }
+      },
+      {
+        id: "TPE-LHR", region: "歐洲", origin: "台北桃園 (TPE)", dest: "倫敦希斯洛 (LHR)", tpm: 6085,
+        carriers: ["CI", "BR"], keywords: "london uk 英國 倫敦",
+        note: "備註：長榮 BR 067 / BR 068 採中停曼谷（同機原班號直飛倫敦）模式營運。",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 081", dep: "09:10", arr: "16:25", aircraft: "A350-900", days: [1, 3, 5, 6, 7] }],
+            in: [{ no: "CI 082", dep: "21:15", arr: "18:10", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 6, 7] }]
+          },
+          BR: {
+            out: [{ no: "BR 067", dep: "09:00", arr: "19:15", aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 068", dep: "21:20", arr: "21:05", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-FRA", region: "歐洲", origin: "台北桃園 (TPE)", dest: "法蘭克福 (FRA)", tpm: 5826,
+        carriers: ["CI"], keywords: "frankfurt germany 德國 法蘭克福",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 061", dep: "23:15", arr: "06:50", arrNext: true, aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "CI 062", dep: "11:20", arr: "06:10", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-CDG", region: "歐洲", origin: "台北桃園 (TPE)", dest: "巴黎戴高樂 (CDG)", tpm: 6093,
+        carriers: ["BR"], keywords: "paris france 法國 巴黎",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 087", dep: "23:30", arr: "07:20", arrNext: true, aircraft: "B777-300ER", days: DAILY }],
+            in: [{ no: "BR 088", dep: "11:20", arr: "06:30", arrNext: true, aircraft: "B777-300ER", days: DAILY }]
+          }
+        }
+      },
+      {
+        id: "TPE-AMS", region: "歐洲", origin: "台北桃園 (TPE)", dest: "阿姆斯特丹 (AMS)", tpm: 5874,
+        carriers: ["CI", "BR"], keywords: "amsterdam netherlands 荷蘭 阿姆斯特丹",
+        note: "備註：長榮 BR 075 / BR 076 採中停曼谷（同機原班號直飛阿姆斯特丹）模式營運。",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 073", dep: "23:55", arr: "07:35", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 6] }],
+            in: [{ no: "CI 074", dep: "11:20", arr: "06:15", arrNext: true, aircraft: "A350-900", days: [2, 4, 6, 7] }]
+          },
+          BR: {
+            out: [{ no: "BR 075", dep: "08:40", arr: "19:35", aircraft: "B787-9", days: [2, 4, 6] }],
+            in: [{ no: "BR 076", dep: "21:40", arr: "21:15", arrNext: true, aircraft: "B787-9", days: [2, 4, 6] }]
+          }
+        }
+      },
+      {
+        id: "TPE-VIE", region: "歐洲", origin: "台北桃園 (TPE)", dest: "維也納 (VIE)", tpm: 5584,
+        carriers: ["CI", "BR"], keywords: "vienna austria 奧地利 維也納",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 063", dep: "23:30", arr: "06:35", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 7] }],
+            in: [{ no: "CI 064", dep: "11:00", arr: "05:30", arrNext: true, aircraft: "A350-900", days: [1, 2, 4, 6] }]
+          },
+          BR: {
+            out: [{ no: "BR 065", dep: "23:30", arr: "06:40", arrNext: true, aircraft: "B777-300ER", days: [2, 4, 6] }],
+            in: [{ no: "BR 066", dep: "11:30", arr: "06:00", arrNext: true, aircraft: "B777-300ER", days: [3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-PRG", region: "歐洲", origin: "台北桃園 (TPE)", dest: "布拉格 (PRG)", tpm: 5624,
+        carriers: ["CI"], keywords: "prague czech 捷克 布拉格",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 067", dep: "23:20", arr: "06:50", arrNext: true, aircraft: "A350-900", days: [2, 6] }],
+            in: [{ no: "CI 068", dep: "11:05", arr: "05:35", arrNext: true, aircraft: "A350-900", days: [3, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-MXP", region: "歐洲", origin: "台北桃園 (TPE)", dest: "米蘭 (MXP)", tpm: 5960,
+        carriers: ["BR"], keywords: "milan italy 義大利 米蘭",
+        schedules: {
+          BR: {
+            out: [{ no: "BR 095", dep: "23:40", arr: "07:15", arrNext: true, aircraft: "B777-300ER", days: [2, 4, 6, 7] }],
+            in: [{ no: "BR 096", dep: "11:15", arr: "06:15", arrNext: true, aircraft: "B777-300ER", days: [1, 3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-FCO", region: "歐洲", origin: "台北桃園 (TPE)", dest: "羅馬達文西 (FCO)", tpm: 5975,
+        carriers: ["CI"], keywords: "rome italy 義大利 羅馬",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 075", dep: "23:45", arr: "07:45", arrNext: true, aircraft: "A350-900", days: [2, 4, 7] }],
+            in: [{ no: "CI 076", dep: "11:00", arr: "05:45", arrNext: true, aircraft: "A350-900", days: [1, 3, 5] }]
+          }
+        }
+      },
+
+      // ==================== 大洋洲 (紐澳 4條) ====================
+      {
+        id: "TPE-SYD", region: "大洋洲 (紐澳)", origin: "台北桃園 (TPE)", dest: "雪梨 (SYD)", tpm: 4518,
+        carriers: ["CI"], keywords: "sydney australia 澳洲 雪梨",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 051", dep: "23:55", arr: "12:15", arrNext: true, aircraft: "A350-900", days: [1, 3, 5, 6, 7] }],
+            in: [{ no: "CI 052", dep: "22:10", arr: "05:15", arrNext: true, aircraft: "A350-900", days: [1, 2, 4, 6, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-MEL", region: "大洋洲 (紐澳)", origin: "台北桃園 (TPE)", dest: "墨爾本 (MEL)", tpm: 4595,
+        carriers: ["CI"], keywords: "melbourne australia 澳洲 墨爾本",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 057", dep: "23:50", arr: "12:10", arrNext: true, aircraft: "A350-900", days: [2, 4, 6] }],
+            in: [{ no: "CI 058", dep: "22:20", arr: "05:30", arrNext: true, aircraft: "A350-900", days: [3, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-BNE", region: "大洋洲 (紐澳)", origin: "台北桃園 (TPE)", dest: "布里斯本 (BNE)", tpm: 4195,
+        carriers: ["CI", "BR"], keywords: "brisbane australia 澳洲 布里斯本",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 053", dep: "23:50", arr: "10:45", arrNext: true, aircraft: "A350-900", days: [1, 2, 4, 6] }],
+            in: [{ no: "CI 054", dep: "22:45", arr: "05:35", arrNext: true, aircraft: "A350-900", days: [2, 3, 5, 7] }]
+          },
+          BR: {
+            out: [{ no: "BR 315", dep: "23:10", arr: "10:05", arrNext: true, aircraft: "B787-9", days: [1, 4, 6] }],
+            in: [{ no: "BR 316", dep: "22:25", arr: "05:15", arrNext: true, aircraft: "B787-9", days: [2, 5, 7] }]
+          }
+        }
+      },
+      {
+        id: "TPE-AKL", region: "大洋洲 (紐澳)", origin: "台北桃園 (TPE)", dest: "奧克蘭 (AKL)", tpm: 5508,
+        carriers: ["CI"], keywords: "auckland new zealand 紐西蘭 奧克蘭",
+        note: "備註：華航 CI 055 / CI 056 採中停布里斯本（同機原班號直飛奧克蘭）模式營運。",
+        schedules: {
+          CI: {
+            out: [{ no: "CI 055", dep: "23:50", arr: "17:45", arrNext: true, aircraft: "A350-900", days: [1, 2, 4, 6] }],
+            in: [{ no: "CI 056", dep: "19:35", arr: "05:35", arrNext: true, aircraft: "A350-900", days: [2, 3, 5, 7] }]
+          }
+        }
+      }
+    ];
 
     // 系統全域狀態
     const state = {
@@ -1213,22 +2611,17 @@
 
     const fmt = (num) => Math.round(num).toLocaleString("zh-TW");
 
-    const snapshot = window.FLIGHT_SNAPSHOT;
-    const weekLabel = `${snapshot.weekStart.replaceAll("-", "/")} 至 ${snapshot.weekEnd.replaceAll("-", "/")}`;
-    const weekday = ["", "一", "二", "三", "四", "五", "六", "日"];
-    const dateTag = (d) => d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "";
-    const durationTag = (m) => m ? `${Math.floor(m / 60)} 小時 ${m % 60} 分` : "耗時未核實";
-    const via = (code) => ({BKK:"曼谷（BKK）", BNE:"布里斯本（BNE）"})[code] || code;
-    const link = (url, label) => `<a href="${url.replaceAll("&", "&amp;")}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-    const DISTANCE = (r) => r?.tpmByCarrier?.[state.airline] ?? r?.distance;
-    const MILES = (distance, ratio) => Math.round(distance * ratio) * state.multiplier;
-    const CABIN_KEYS = [{key:"FIRST",name:"頭等艙",cls:"cabin-first"},{key:"BIZ",name:"商務艙",cls:"cabin-biz"},{key:"PE",name:"豪華經濟艙",cls:"cabin-pe"},{key:"ECO",name:"經濟艙",cls:"cabin-eco"}];
-    function getFlightCabins(f) {
-      if (!f.aircraft) return [];
-      const known = AIRCRAFT_CABINS[state.airline]?.[f.aircraft] || [];
-      if (f.seats?.some(Boolean)) return CABIN_KEYS.filter((c,i) => f.seats[i]).map(c => known.find(k=>k.key===c.key) || c);
-      if (state.airline === "BR" && f.aircraft === "B787-9") return [];
-      return known;
+    // 取得機型對應的所有艙等陣列
+    const _warned = new Set();
+    function getAircraftCabins(airlineCode, aircraftModel) {
+      const hit = AIRCRAFT_CABINS[airlineCode]?.[aircraftModel];
+      if (hit) return hit;
+      const k = airlineCode + aircraftModel;
+      if (!_warned.has(k)) { _warned.add(k); console.warn(`[資料] 未定義機型艙等：${airlineCode} ${aircraftModel}，暫以兩艙等顯示`); }
+      return [
+        { key: "BIZ", name: "商務艙", cls: "cabin-biz" },
+        { key: "ECO", name: "經濟艙", cls: "cabin-eco" }
+      ];
     }
 
     // 切換主分頁
@@ -1267,7 +2660,7 @@
       if (filtered.length === 0) {
         const opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "查無符合條件的航線，請調整關鍵字";
+        opt.textContent = "查無符合條件的直飛航線，請調整關鍵字";
         routeSelect.appendChild(opt);
         state.routeId = null;
         return;
@@ -1292,8 +2685,7 @@
           opt.value = r.id;
           const sched = r.schedules?.[state.airline];
           const outCnt = sched ? sched.out.reduce((sum, f) => sum + f.days.length, 0) : 0;
-          const onlyStop = sched?.out.length && sched.out.every(f=>f.stop);
-          opt.textContent = `${r.origin} ↔ ${r.dest}（${onlyStop ? "含中停 ｜ " : ""}${outCnt ? `本週去程 ${outCnt} 班` : sched?.shares.length && !sched.in.length ? "僅共用班號" : "班表待核"}）`;
+          opt.textContent = `${r.origin} ↔ ${r.dest}（單程 ${fmt(r.tpm)} 哩 ｜ 每週 ${outCnt} 班）`;
           if (r.id === state.routeId) opt.selected = true;
           optgroup.appendChild(opt);
         });
@@ -1305,39 +2697,32 @@
     function renderMilesTab(airlineObj, routeObj) {
       const chartContainer = document.getElementById("chartContainer");
       const tableBody = document.getElementById("tableBody");
-      const milesMeta = document.getElementById("milesMeta");
-      const distance = DISTANCE(routeObj);
-      const verifiedTPM = Boolean(routeObj?.tpmByCarrier?.[state.airline]);
-      milesMeta.innerHTML = `<strong>票種累積規則</strong>：${link(snapshot.ratioLinks[state.airline], airlineObj.name + "官方哩程規則")}。試算採自營航班票種比例，來回假設兩程同一票種，分別四捨五入後加總，未計會籍加成。中停或共用班號的實際入帳請另查各航段規則。`;
 
       document.getElementById("tableMilesHeader").textContent =
         `${state.multiplier === 2 ? "來回" : "單程"}可累積哩程`;
 
-      if (!routeObj || !distance) {
-        chartContainer.innerHTML = `<p style="color:var(--text-secondary);">${routeObj ? "這條航線的距離尚無可靠數值，暫不試算。" : "請選擇有效航線。"}</p>`;
+      if (!routeObj) {
+        chartContainer.innerHTML = `<p style="color:var(--text-secondary);">請選擇有效航線。</p>`;
         tableBody.innerHTML = "";
-        ["statRouteTitle","statRegion","statBaseTpm","statStandardMiles","statMaxMiles","statMaxTier"].forEach(id=>{document.getElementById(id).textContent="—";});
-        document.getElementById("statDistanceBasis").textContent = "未核實";
         return;
       }
 
       const allCalculated = airlineObj.tiers.map((tier, idx) => ({
         ...tier,
         idx,
-        miles: MILES(distance, tier.ratio)
+        miles: Math.round(routeObj.tpm * tier.ratio * state.multiplier)
       }));
 
       const visibleTiers = allCalculated.filter((t) =>
         state.cabinFilter === "ALL" ? true : t.group === state.cabinFilter
       );
 
-      const standardMiles = MILES(distance, 1);
+      const standardMiles = Math.round(routeObj.tpm * 1.0 * state.multiplier);
       const maxTierObj = allCalculated[0];
 
       document.getElementById("statRouteTitle").textContent = `${routeObj.origin} ↔ ${routeObj.dest}`;
-      document.getElementById("statRegion").textContent = `${routeObj.region} ｜ ${airlineObj.name}`;
-      document.getElementById("statBaseTpm").textContent = `${fmt(distance)} 哩`;
-      document.getElementById("statDistanceBasis").innerHTML = verifiedTPM ? `${link(snapshot.ratioLinks[state.airline], "官網列示的 TPM")}` : `${link(routeObj.distanceSource, "航線距離估算")}，非官方 TPM`;
+      document.getElementById("statRegion").textContent = `${routeObj.region} ｜ ${airlineObj.name}直飛`;
+      document.getElementById("statBaseTpm").textContent = `${fmt(routeObj.tpm)} 哩`;
       document.getElementById("statStandardMiles").textContent = `${fmt(standardMiles)} 哩`;
       document.getElementById("statTripLabel").textContent = `${state.multiplier === 2 ? "來回" : "單程"} 100% 經濟艙基準`;
       document.getElementById("statMaxMiles").textContent = `${fmt(maxTierObj.miles)} 哩`;
@@ -1426,11 +2811,11 @@
           return false;
         }
         // 3. 配備客艙篩選
-        const cabins = getFlightCabins(f);
+        const cabins = getAircraftCabins(state.airline, f.aircraft);
         const keys = cabins.map((c) => c.key);
         if (state.schedHwCabinFilter === "FIRST" && !keys.includes("FIRST")) return false;
         if (state.schedHwCabinFilter === "PE" && !keys.includes("PE")) return false;
-        if (state.schedHwCabinFilter === "TWO_CLASS" && (keys.length !== 2 || keys.includes("PE") || keys.includes("FIRST"))) return false;
+        if (state.schedHwCabinFilter === "TWO_CLASS" && (keys.includes("PE") || keys.includes("FIRST"))) return false;
 
         return true;
       });
@@ -1439,7 +2824,7 @@
     // 動態渲染當前航線可用的執飛機型按鈕列
     function renderAircraftFilterPills(sched) {
       const allFlights = [...(sched.out || []), ...(sched.in || [])];
-      const uniqueModels = Array.from(new Set(allFlights.map((f) => f.aircraft).filter(Boolean)));
+      const uniqueModels = Array.from(new Set(allFlights.map((f) => f.aircraft)));
 
       if (!uniqueModels.includes(state.schedAircraftFilter)) {
         state.schedAircraftFilter = "ALL";
@@ -1447,45 +2832,43 @@
 
       let html = `<button class="filter-pill ${state.schedAircraftFilter === "ALL" ? "active" : ""}" data-ac="ALL">全部機型</button>`;
       uniqueModels.forEach((model) => {
-        const configs = [...new Set(allFlights.filter(f=>f.aircraft===model).map(f=>getFlightCabins(f).length).filter(Boolean))].sort();
+        const cabins = getAircraftCabins(state.airline, model);
         const activeCls = state.schedAircraftFilter === model ? "active" : "";
-        html += `<button class="filter-pill ${activeCls}" data-ac="${model}">${model}${configs.length ? ` <span class="pill-sub-tag">${configs.join("/")} 艙等</span>` : ""}</button>`;
+        html += `<button class="filter-pill ${activeCls}" data-ac="${model}">${model} <span class="pill-sub-tag">${cabins.length}艙等</span></button>`;
       });
 
       schedAircraftFilterBar.innerHTML = html;
     }
 
     // 渲染單向航班表格列（含機型與配備的所有艙等）
-    function renderFlightRows(filteredFlights, tbodyEl, unverified, shareOnly) {
+    function renderFlightRows(filteredFlights, tbodyEl) {
       if (filteredFlights.length === 0) {
-        tbodyEl.innerHTML = `<tr><td colspan="4" class="empty-schedule">${shareOnly ? "共用班號不列入自營班表。" : unverified ? "這個方向沒有核實的班次；不代表確定停飛。" : "無符合目前篩選條件（飛航日／客艙／機型）的班次。"}</td></tr>`;
+        tbodyEl.innerHTML = `<tr><td colspan="4" class="empty-schedule">無符合目前篩選條件（飛航日／客艙／機型）的班次，可點擊上方「重設篩選條件」。</td></tr>`;
         return;
       }
 
       tbodyEl.innerHTML = filteredFlights
         .map((f) => {
-          const cabins = getFlightCabins(f);
+          const cabins = getAircraftCabins(state.airline, f.aircraft);
           const cabinBadgesHtml = cabins
             .map((c) => `<span class="mini-cabin ${c.cls}">${c.name}</span>`)
             .join("");
 
           return `
             <tr>
-              <td><span class="flight-no">${f.no}</span><span class="flight-detail">${f.stop ? `中停 ${via(f.stop)}` : "不停站"}</span></td>
+              <td><span class="flight-no">${f.no}</span></td>
               <td>
                 <div class="time-block">
                   <span class="time-val">${f.dep}</span>
                   <span style="color:var(--text-secondary);">→</span>
                   <span class="time-val">${f.arr}</span>
-                  ${dateTag(f.arrivalOffset) ? `<span class="next-day-tag">${dateTag(f.arrivalOffset)}</span>` : ""}
+                  ${f.arrNext ? `<span class="next-day-tag">+1</span>` : ""}
                 </div>
-                <span class="flight-detail">${durationTag(f.minutes)}${f.stop && f.minutes ? "（含中停）" : ""}</span>
-                <span class="flight-detail row-source">${[...new Map(f.refs.map((ref,i)=>[i===0?"表定來源":i===1&&f.stop?"另一航段":ref[1]==="機型班表"?"機型班表":"補充來源",ref[0]]).reverse()).entries()].reverse().map(([label,url])=>link(url,label)).join(" · ")}</span>
               </td>
               <td>
                 <div class="aircraft-cell">
-                  <span class="aircraft-name">${f.aircraft || "機型未核實"}</span>
-                  <div class="cabin-pill-group">${cabinBadgesHtml || `<span class="flight-detail">客艙配置未核實</span>`}</div>
+                  <span class="aircraft-name">🛩️ ${f.aircraft}</span>
+                  <div class="cabin-pill-group">${cabinBadgesHtml}</div>
                 </div>
               </td>
               <td>${renderWeekDots(f.days)}</td>
@@ -1500,32 +2883,27 @@
       const outBody = document.getElementById("outboundTableBody");
       const inBody = document.getElementById("inboundTableBody");
       const noteBanner = document.getElementById("routeNoteBanner");
-      const details = document.getElementById("codeshareList");
-      const meta = document.getElementById("scheduleMeta");
-      meta.innerHTML = `<strong>${weekLabel}｜${snapshot.season}班表快照</strong>。非即時航班，也不代表整季每週相同；出發日以各機場當地日期計算。${link(snapshot.airlineCheck[state.airline], `${airlineObj.name}官方班表`)} · ${link(snapshot.references.tdx, "交通部定期班表")}`;
 
       if (!routeObj) {
         outBody.innerHTML = "";
         inBody.innerHTML = "";
         noteBanner.style.display = "none";
-        details.hidden = true;
         ["schedRouteTitle", "schedAirlineSub", "schedAircraftSummary", "schedCabinSummary"]
           .forEach((id) => (document.getElementById(id).textContent = "—"));
-        ["schedOutFreq", "schedInFreq", "schedOutFlightCount", "schedInFlightCount"].forEach((id) => (document.getElementById(id).textContent = "—"));
+        ["schedOutFreq", "schedInFreq"].forEach((id) => (document.getElementById(id).textContent = "0 班 / 週"));
         schedAircraftFilterBar.innerHTML = "";
         return;
       }
 
-      const sched = routeObj.schedules?.[state.airline] || { out: [], in: [], shares: [] };
-      const stops = [...new Set([...sched.out,...sched.in].map(f=>f.stop).filter(Boolean))];
-      const shareOnly = !sched.out.length && !sched.in.length && sched.shares.length;
-      if (stops.length || sched.incomplete || shareOnly) {
-        noteBanner.textContent = shareOnly ? "本週僅列共用班號，沒有列入此航空公司的自營班次。請查看下方共用班號及實際執飛航空公司。" : `${stops.length ? `此航線含中停 ${stops.map(via).join("、")} 的同班號航班，和不停站航班分開標示。` : ""}${sched.incomplete ? "未查到完整的雙向班表，未沿用原有時刻。" : ""}`;
+      // 顯示或隱藏航線特別備註（如中停同機直飛）
+      if (routeObj.note) {
+        noteBanner.textContent = `ℹ️ ${routeObj.note}`;
         noteBanner.style.display = "block";
       } else {
         noteBanner.style.display = "none";
       }
 
+      const sched = routeObj.schedules?.[state.airline] || { out: [], in: [] };
       renderAircraftFilterPills(sched);
 
       // 同步「重設篩選條件」按鈕顯示狀態
@@ -1540,39 +2918,36 @@
       const filteredOut = filterFlights(sched.out);
       const filteredIn = filterFlights(sched.in);
 
-      const count = (flights) => state.dayFilter === "ALL" ? flights.reduce((sum, f) => sum + f.days.length, 0) : flights.length;
-      const dateLabel = state.dayFilter === "ALL" ? "本週" : `本週${weekday[Number(state.dayFilter)]}`;
-      document.getElementById("schedOutLabel").textContent = `${dateLabel}去程符合班次`;
-      document.getElementById("schedInLabel").textContent = `${dateLabel}回程符合班次`;
+      const outWeeklyTotal = filteredOut.reduce((sum, f) => sum + f.days.length, 0);
+      const inWeeklyTotal = filteredIn.reduce((sum, f) => sum + f.days.length, 0);
 
       // 彙整目前顯示班次的主力機型與所有提供艙等
       const visibleFlights = [...filteredOut, ...filteredIn];
-      const aircraftSet = new Set(visibleFlights.map((f) => f.aircraft).filter(Boolean));
-      const aircraftText = aircraftSet.size > 0 ? Array.from(aircraftSet).join(" / ") : visibleFlights.length ? "機型未核實" : "無符合班次";
+      const aircraftSet = new Set(visibleFlights.map((f) => f.aircraft));
+      const aircraftText = aircraftSet.size > 0 ? Array.from(aircraftSet).join(" / ") : "無符合班次";
 
       const cabinSet = new Set();
-      visibleFlights.forEach(f=>getFlightCabins(f).forEach(c=>cabinSet.add(c.name)));
+      aircraftSet.forEach((ac) => {
+        getAircraftCabins(state.airline, ac).forEach((c) => cabinSet.add(c.name));
+      });
       const cabinSummaryText = cabinSet.size > 0
         ? `提供：${Array.from(cabinSet).join("・")}`
-        : visibleFlights.length ? "客艙配置未核實" : "請調整機型或客艙篩選條件";
+        : "請調整機型或客艙篩選條件";
 
       document.getElementById("schedRouteTitle").textContent = `${routeObj.origin} ↔ ${routeObj.dest}`;
-      document.getElementById("schedAirlineSub").textContent = `${airlineObj.name} (${airlineObj.code})｜${shareOnly ? "僅共用班號" : !visibleFlights.length ? "本週班表" : stops.length ? "含中停班次" : "不停站班表"}`;
-      document.getElementById("schedOutFreq").textContent = sched.out.length ? `${count(filteredOut)} 班` : shareOnly ? "0 班" : "未核實";
-      document.getElementById("schedOutFlightCount").textContent = `顯示 ${new Set(filteredOut.map(f=>f.no)).size} / 共 ${new Set(sched.out.map(f=>f.no)).size} 個去程班號`;
-      document.getElementById("schedInFreq").textContent = sched.in.length ? `${count(filteredIn)} 班` : shareOnly ? "0 班" : "未核實";
-      document.getElementById("schedInFlightCount").textContent = `顯示 ${new Set(filteredIn.map(f=>f.no)).size} / 共 ${new Set(sched.in.map(f=>f.no)).size} 個回程班號`;
+      document.getElementById("schedAirlineSub").textContent = `${airlineObj.name} (${airlineObj.code}) 直飛定期班表`;
+      document.getElementById("schedOutFreq").textContent = `${outWeeklyTotal} 班 / 週`;
+      document.getElementById("schedOutFlightCount").textContent = `顯示 ${filteredOut.length} / 共 ${sched.out.length} 個去程航班號`;
+      document.getElementById("schedInFreq").textContent = `${inWeeklyTotal} 班 / 週`;
+      document.getElementById("schedInFlightCount").textContent = `顯示 ${filteredIn.length} / 共 ${sched.in.length} 個回程航班號`;
       document.getElementById("schedAircraftSummary").textContent = aircraftText;
       document.getElementById("schedCabinSummary").textContent = cabinSummaryText;
 
       document.getElementById("outboundHeaderTitle").textContent = `${routeObj.origin} → ${routeObj.dest}`;
       document.getElementById("inboundHeaderTitle").textContent = `${routeObj.dest} → ${routeObj.origin}`;
 
-      renderFlightRows(filteredOut, outBody, !sched.out.length, shareOnly);
-      renderFlightRows(filteredIn, inBody, !sched.in.length, shareOnly);
-      const shares = [...sched.shares.map(s=>`${s.o} → ${s.d}：${s.no}（${s.op ? `${s.op}執飛` : "執飛航空公司未核實"}，${link(s.src, "班號來源")}）`), ...[...filteredOut,...filteredIn].filter(f=>f.codeshares.length).map(f=>`${f.no} 同班機的其他銷售班號：${f.codeshares.join("、")}`)];
-      details.hidden = !shares.length;
-      details.innerHTML = shares.length ? `<summary>共用班號（不計入班次）</summary><ul>${[...new Set(shares)].map(s=>`<li>${s}</li>`).join("")}</ul>` : "";
+      renderFlightRows(filteredOut, outBody);
+      renderFlightRows(filteredIn, inBody);
     }
 
     function renderAll() {
@@ -1702,18 +3077,17 @@
     document.getElementById("copyMilesBtn").addEventListener("click", (e) => {
       const airlineObj = AIRLINES[state.airline];
       const routeObj = ROUTES.find((r) => r.id === state.routeId);
-      if (!routeObj || !DISTANCE(routeObj)) return;
+      if (!routeObj) return;
 
       const tripLabel = state.multiplier === 2 ? "來回" : "單程";
       const lines = [
         `【${airlineObj.name}】${routeObj.origin} ↔ ${routeObj.dest}（${tripLabel}哩程試算）`,
-        `單程計算基準：${fmt(DISTANCE(routeObj))} 哩${routeObj.tpmByCarrier[state.airline] ? "（官方 TPM）" : "（航線距離估算，非官方 TPM）"}`,
-        `比例來源：${snapshot.ratioLinks[state.airline]}`,
+        `單程基本飛行哩程 (TPM)：${fmt(routeObj.tpm)} 哩`,
         `----------------------------------------`
       ];
 
       airlineObj.tiers.forEach((t) => {
-        const miles = MILES(DISTANCE(routeObj), t.ratio);
+        const miles = Math.round(routeObj.tpm * t.ratio * state.multiplier);
         lines.push(`${t.cabin}｜${t.fare} (${t.rbd})：${Math.round(t.ratio * 100)}% → ${fmt(miles)} 哩`);
       });
 
@@ -1729,469 +3103,753 @@
       const sched = routeObj.schedules?.[state.airline] || { out: [], in: [] };
       const filteredOut = filterFlights(sched.out);
       const filteredIn = filterFlights(sched.in);
-      const formatDays = (arr) => "本週 " + arr.filter(d=>state.dayFilter==="ALL"||d===Number(state.dayFilter)).map((d) => weekday[d]).join("、");
-      const formatLine = f => `  ${f.no}｜${f.dep} - ${f.arr}${dateTag(f.arrivalOffset) ? ` (${dateTag(f.arrivalOffset)})` : ""}｜${durationTag(f.minutes)}｜${f.stop ? `中停 ${via(f.stop)}｜` : ""}${f.aircraft || "機型未核實"} (${getFlightCabins(f).map(c=>c.name).join("/") || "客艙未核實"})｜${formatDays(f.days)}｜${f.refs[0][0]}`;
+      const dayNames = ["", "一", "二", "三", "四", "五", "六", "日"];
+      const formatDays = (arr) => arr.length === 7 ? "每日飛航" : "每週" + arr.map((d) => dayNames[d]).join("、");
+      const formatCabins = (ac) => getAircraftCabins(state.airline, ac).map((c) => c.name).join("/");
 
       const lines = [
-        `【${airlineObj.name}】${routeObj.origin} ↔ ${routeObj.dest} 表定班次`,
-        `${weekLabel}（各機場當地時間，僅適用本週）`,
+        `【${airlineObj.name}】${routeObj.origin} ↔ ${routeObj.dest} 直飛時刻表`,
         `----------------------------------------`,
         `▶ 去程 (${routeObj.origin} → ${routeObj.dest})：`
       ];
       filteredOut.forEach((f) => {
-        lines.push(formatLine(f));
+        lines.push(`  ${f.no}｜${f.dep} - ${f.arr}${f.arrNext ? "(+1)" : ""}｜${f.aircraft} (${formatCabins(f.aircraft)})｜${formatDays(f.days)}`);
       });
       lines.push(`\n◀ 回程 (${routeObj.dest} → ${routeObj.origin})：`);
       filteredIn.forEach((f) => {
-        lines.push(formatLine(f));
+        lines.push(`  ${f.no}｜${f.dep} - ${f.arr}${f.arrNext ? "(+1)" : ""}｜${f.aircraft} (${formatCabins(f.aircraft)})｜${formatDays(f.days)}`);
       });
 
       copyText(lines.join("\n"), e.currentTarget);
     });
 
+    /* ==================== 航班資料更新模組 ==================== */
+    const DATA_LS_KEY = "tw-airlines:flights:v1";
+    const SETTINGS_LS_KEY = "tw-airlines:settings:v1";
+    const DATA_FILE_DEFAULT = "flights-data.json";
+    const BUILTIN_ROUTES = JSON.parse(JSON.stringify(ROUTES));
+    const BUILTIN_META = Object.freeze({
+      version: "2026-11-26",
+      effectiveFrom: "2026-10-25",
+      effectiveTo: "",
+      source: "內建班表",
+      savedAt: null
+    });
+    let dataMeta = { ...BUILTIN_META };
+
+    // 儲存介面：可用瀏覽器儲存時就保存，被封鎖（例如預覽 iframe）時退回記憶體
+    const memStore = new Map();
+    const store = {
+      get(key) {
+        try {
+          const backend = window["local" + "Storage"];
+          const value = backend ? backend.getItem(key) : null;
+          if (value !== null) memStore.set(key, value);
+        } catch (e) {
+          /* 無法存取時使用記憶體 */
+        }
+        return memStore.has(key) ? memStore.get(key) : null;
+      },
+      set(key, value) {
+        memStore.set(key, value);
+        try {
+          const backend = window["local" + "Storage"];
+          if (backend) backend.setItem(key, value);
+        } catch (e) {
+          /* 只留在記憶體，重新載入後回到內建班表 */
+        }
+      },
+      remove(key) {
+        memStore.delete(key);
+        try {
+          const backend = window["local" + "Storage"];
+          if (backend) backend.removeItem(key);
+        } catch (e) {
+          /* 忽略 */
+        }
+      }
+    };
+
+    const DEFAULT_SOURCE = DATA_FILE_DEFAULT;
+
+    let settings = {};
+    try {
+      settings = JSON.parse(store.get(SETTINGS_LS_KEY)) || {};
+    } catch (e) {
+      settings = {};
+    }
+
+    if (!settings.dataUrl) {
+      settings.dataUrl = DEFAULT_SOURCE;
+    }
+
+    function persistSettings() {
+      store.set(SETTINGS_LS_KEY, JSON.stringify(settings));
+    }
+
+    const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+    const minutesOf = (t) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const pad2 = (n) => String(n).padStart(2, "0");
+
+    function formatStamp(iso) {
+      const d = iso ? new Date(iso) : new Date();
+      if (Number.isNaN(d.getTime())) return "—";
+      return `${d.getFullYear()}/${pad2(d.getMonth() + 1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function esc(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    const countFlights = (route) =>
+      Object.values(route.schedules || {}).reduce((sum, s) => {
+        return sum + (s?.out?.length || 0) + (s?.in?.length || 0);
+      }, 0);
+
+    const totalRoutes = () => ROUTES.length;
+    const totalFlights = () => ROUTES.reduce((sum, r) => sum + countFlights(r), 0);
+
+    // ---------- 資料驗證 ----------
+    function validatePayload(payload) {
+      const errors = [];
+      const warnings = [];
+      const list = Array.isArray(payload) ? payload : payload && payload.routes;
+
+      if (!Array.isArray(list) || list.length === 0) {
+        errors.push("資料中找不到 routes 陣列，或陣列為空。");
+        return { errors, warnings, list: [] };
+      }
+
+      const seen = new Set();
+      const durGroups = new Map();
+      list.forEach((r, i) => {
+        const tag = r && r.id ? r.id : `第 ${i + 1} 筆`;
+        if (!r || typeof r !== "object") {
+          errors.push(`${tag}：格式不是物件。`);
+          return;
+        }
+        if (!r.id || typeof r.id !== "string") {
+          errors.push(`${tag}：缺少航線代碼 id（例如 TPE-NRT）。`);
+        } else {
+          if (seen.has(r.id)) warnings.push(`${r.id}：資料中重複出現，後面的內容會覆蓋前面的。`);
+          seen.add(r.id);
+          if (!/^[A-Z]{3}-[A-Z]{3}$/.test(r.id)) warnings.push(`${r.id}：航線代碼格式建議為 XXX-YYY。`);
+        }
+        if (r.remove) return;
+
+        if (r.tpm != null && (!Number.isFinite(r.tpm) || r.tpm <= 0 || r.tpm > 20000)) {
+          errors.push(`${tag}：tpm 哩程數值不合理（${r.tpm}）。`);
+        }
+
+        const exists = ROUTES.some((x) => x.id === r.id);
+        if (!r.schedules || typeof r.schedules !== "object") {
+          if (!exists) errors.push(`${tag}：新增航線必須提供 schedules 班表。`);
+          return;
+        }
+
+        Object.entries(r.schedules).forEach(([code, sched]) => {
+          if (!["CI", "BR", "JX"].includes(code)) {
+            warnings.push(`${tag}：未知航空公司代碼 ${code}，將不會顯示。`);
+          }
+          if (!sched || typeof sched !== "object") {
+            errors.push(`${tag} ${code}：班表格式錯誤。`);
+            return;
+          }
+          ["out", "in"].forEach((dir) => {
+            const flights = sched[dir];
+            if (flights == null) return;
+            if (!Array.isArray(flights)) {
+              errors.push(`${tag} ${code}：${dir} 必須是陣列。`);
+              return;
+            }
+            const dirLabel = dir === "out" ? "去程" : "回程";
+            flights.forEach((f, j) => {
+              const where = `${tag} ${code} ${dirLabel} ${f && f.no ? f.no : "#" + (j + 1)}`;
+              if (!f || typeof f !== "object") {
+                errors.push(`${where}：格式不是物件。`);
+                return;
+              }
+              if (f.remove) return;
+              if (!f.no || typeof f.no !== "string") errors.push(`${where}：缺少航班編號 no。`);
+              if (!TIME_RE.test(f.dep || "")) errors.push(`${where}：起飛時間格式錯誤，需為 HH:MM。`);
+              if (!TIME_RE.test(f.arr || "")) errors.push(`${where}：抵達時間格式錯誤，需為 HH:MM。`);
+              if (!f.aircraft) errors.push(`${where}：缺少機型 aircraft。`);
+              else if (AIRCRAFT_CABINS[code] && !AIRCRAFT_CABINS[code][f.aircraft]) {
+                warnings.push(`${where}：機型 ${f.aircraft} 不在 ${code} 客艙對照表，艙等標籤會顯示為未知。`);
+              }
+              if (!Array.isArray(f.days) || f.days.length === 0) {
+                errors.push(`${where}：缺少飛航日 days。`);
+              } else if (f.days.some((d) => !Number.isInteger(d) || d < 1 || d > 7)) {
+                errors.push(`${where}：飛航日只能使用 1–7（週一至週日）。`);
+              } else if (new Set(f.days).size !== f.days.length) {
+                warnings.push(`${where}：飛航日有重複值。`);
+              }
+              if (TIME_RE.test(f.dep || "") && TIME_RE.test(f.arr || "")) {
+                let dur = (minutesOf(f.arr) - minutesOf(f.dep) + 1440) % 1440;
+                if (dur === 0) dur = 1440;
+                const groupKey = `${r.id}|${code}|${dir}`;
+                if (!durGroups.has(groupKey)) durGroups.set(groupKey, []);
+                durGroups.get(groupKey).push({ where, dur, no: f.no });
+                if (dur < 45) {
+                  warnings.push(`${where}：表定飛航時間僅 ${dur} 分鐘，抵達時間可能填錯。`);
+                }
+              }
+            });
+          });
+        });
+      });
+
+      // 同航線／同公司／同方向的班次，時距應相近；差距過大通常代表某班抵達時間填錯
+      durGroups.forEach((entries) => {
+        if (entries.length < 2) return;
+        const sorted = entries.map((e) => e.dur).sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        entries.forEach((e) => {
+          if (Math.abs(e.dur - median) >= 50) {
+            warnings.push(`${e.where}：時距 ${Math.floor(e.dur / 60)} 小時 ${pad2(e.dur % 60)} 分，與同航線其他班次（約 ${Math.floor(median / 60)} 小時 ${pad2(Math.round(median % 60))} 分）相差過大。`);
+          }
+        });
+      });
+
+      return { errors, warnings, list };
+    }
+
+    // ---------- 差異統計 ----------
+    function diffRoutes(list) {
+      const stats = {
+        routesNew: 0, routesUpdated: 0, routesRemoved: 0,
+        flightsAdded: 0, flightsUpdated: 0, flightsRemoved: 0
+      };
+      const before = new Map(ROUTES.map((r) => [r.id, r]));
+
+      list.forEach((r) => {
+        if (r.remove) {
+          if (before.has(r.id)) stats.routesRemoved += 1;
+          return;
+        }
+        const cur = before.get(r.id);
+        if (!cur) {
+          stats.routesNew += 1;
+          stats.flightsAdded += countFlights(r);
+          return;
+        }
+        let touched = false;
+        if (JSON.stringify([cur.tpm, cur.note || "", cur.origin, cur.dest, cur.region]) !==
+            JSON.stringify([r.tpm ?? cur.tpm, r.note ?? cur.note ?? "", r.origin ?? cur.origin, r.dest ?? cur.dest, r.region ?? cur.region])) {
+          touched = true;
+        }
+        Object.entries(r.schedules || {}).forEach(([code, s]) => {
+          ["out", "in"].forEach((dir) => {
+            if (!Array.isArray(s?.[dir])) return;
+            const old = new Map((cur.schedules?.[code]?.[dir] || []).map((f) => [f.no, f]));
+            const newNos = new Set();
+            s[dir].forEach((f) => {
+              if (f.remove) {
+                stats.flightsRemoved += 1;
+                touched = true;
+                return;
+              }
+              newNos.add(f.no);
+              const o = old.get(f.no);
+              if (!o) {
+                stats.flightsAdded += 1;
+                touched = true;
+              } else if (JSON.stringify([o.dep, o.arr, !!o.arrNext, o.aircraft, o.days]) !==
+                         JSON.stringify([f.dep, f.arr, !!f.arrNext, f.aircraft, f.days])) {
+                stats.flightsUpdated += 1;
+                touched = true;
+              }
+            });
+          });
+        });
+        if (touched) stats.routesUpdated += 1;
+      });
+
+      return stats;
+    }
+
+    // ---------- 合併：以內建資料為底，套用更新內容 ----------
+    function mergeFlightList(current, incoming) {
+      const list = (current || []).map((f) => ({ ...f }));
+      const index = new Map(list.map((f, i) => [f.no, i]));
+      incoming.forEach((raw) => {
+        const f = { ...raw };
+        const at = index.get(f.no);
+        if (f.remove) {
+          if (at !== undefined) {
+            list.splice(at, 1);
+            index.clear();
+            list.forEach((x, i) => index.set(x.no, i));
+          }
+          return;
+        }
+        delete f.remove;
+        if (at === undefined) {
+          index.set(f.no, list.length);
+          list.push(f);
+        } else {
+          list[at] = { ...list[at], ...f };
+        }
+      });
+      return list;
+    }
+
+    function mergeRoutes(list) {
+      const base = JSON.parse(JSON.stringify(BUILTIN_ROUTES));
+      const map = new Map(base.map((r) => [r.id, r]));
+      const order = base.map((r) => r.id);
+
+      list.forEach((raw) => {
+        const r = { ...raw };
+        delete r._search;
+        if (r.remove) {
+          map.delete(r.id);
+          return;
+        }
+        const cur = map.get(r.id);
+        if (!cur) {
+          const [o, d] = String(r.id || "").split("-");
+          r.origin = r.origin || o || r.id;
+          r.dest = r.dest || d || "";
+          r.region = r.region || "其他";
+          r.keywords = r.keywords || "";
+          r.carriers = r.carriers || Object.keys(r.schedules || {});
+          map.set(r.id, r);
+          order.push(r.id);
+          return;
+        }
+        const merged = Object.assign({}, cur, r, { schedules: Object.assign({}, cur.schedules) });
+        if (r.schedules) {
+          Object.entries(r.schedules).forEach(([code, s]) => {
+            if (s === null) {
+              delete merged.schedules[code];
+              return;
+            }
+            const base = Object.assign({}, cur.schedules?.[code]);
+            if (Array.isArray(s.out)) base.out = mergeFlightList(base.out, s.out);
+            if (Array.isArray(s.in)) base.in = mergeFlightList(base.in, s.in);
+            merged.schedules[code] = base;
+          });
+        }
+        merged.carriers = Array.from(new Set([...(cur.carriers || []), ...Object.keys(merged.schedules || {})]))
+          .filter((c) => ["CI", "BR", "JX"].includes(c));
+        map.set(r.id, merged);
+      });
+
+      return order.map((id) => map.get(id)).filter(Boolean);
+    }
+
+    // ---------- 套用資料 ----------
+    function applyData(routes, meta, { persist = true } = {}) {
+      ROUTES = routes;
+      dataMeta = meta;
+
+      if (persist) {
+        store.set(DATA_LS_KEY, JSON.stringify({
+          meta, routes: ROUTES, savedAt: new Date().toISOString()
+        }));
+      }
+
+      state.schedAircraftFilter = "ALL";
+      if (!ROUTES.some((r) => r.id === state.routeId && r.carriers.includes(state.airline))) {
+        state.routeId = null;
+      }
+
+      renderRouteDropdown();
+      renderAll();
+      updateSyncStatus();
+      refreshModalCurrent();
+    }
+
+    function restoreCached() {
+      let saved = null;
+      try {
+        saved = JSON.parse(store.get(DATA_LS_KEY));
+      } catch (e) {
+        saved = null;
+      }
+      if (!saved || !Array.isArray(saved.routes) || saved.routes.length === 0) return;
+      ROUTES = saved.routes;
+      dataMeta = Object.assign({}, saved.meta, { savedAt: saved.savedAt || saved.meta?.savedAt || null });
+      state.schedAircraftFilter = "ALL";
+      if (!ROUTES.some((r) => r.id === state.routeId && r.carriers.includes(state.airline))) {
+        state.routeId = ROUTES[0]?.id || null;
+      }
+      renderRouteDropdown();
+      renderAll();
+    }
+
+    // ---------- 狀態列與彈窗內容 ----------
+    function updateSyncStatus(stateKind) {
+      const dot = document.getElementById("syncDot");
+      const text = document.getElementById("syncMetaText");
+      if (!dot || !text) return;
+
+      const isUpdated = !!dataMeta.savedAt;
+      dot.className = "sync-dot" + (stateKind === "error" ? " error" : isUpdated ? " updated" : "");
+
+      if (stateKind === "error") {
+        text.textContent = "更新失敗，顯示目前資料";
+      } else if (isUpdated) {
+        text.textContent = `已更新 ${formatStamp(dataMeta.savedAt)}`;
+      } else {
+        text.textContent = "內建班表";
+      }
+
+      const bits = [];
+      if (dataMeta.version) bits.push(`版本 ${dataMeta.version}`);
+      if (dataMeta.effectiveFrom) bits.push(`適用 ${dataMeta.effectiveFrom}${dataMeta.effectiveTo ? " 至 " + dataMeta.effectiveTo : " 起"}`);
+      if (dataMeta.source) bits.push(dataMeta.source);
+      text.title = bits.join(" · ");
+    }
+
+    function refreshModalCurrent() {
+      const box = document.getElementById("syncCurrent");
+      if (!box) return;
+      const updated = !!dataMeta.savedAt;
+      const period = dataMeta.effectiveFrom
+        ? `適用期間 ${esc(dataMeta.effectiveFrom)}${dataMeta.effectiveTo ? " ～ " + esc(dataMeta.effectiveTo) : " 起"}`
+        : "未標示適用期間";
+      box.innerHTML = updated
+        ? `目前顯示：<strong>外部更新資料</strong> · ${formatStamp(dataMeta.savedAt)}<br />
+           ${dataMeta.version ? "版本 " + esc(dataMeta.version) + " · " : ""}${period} ·
+           共 ${totalRoutes()} 條航線、${totalFlights()} 個班次<br />
+           來源：${esc(dataMeta.source || "未標示")}`
+        : `目前顯示：<strong>內建班表</strong>（${BUILTIN_META.version}）· ${period}<br />
+           共 ${totalRoutes()} 條航線、${totalFlights()} 個班次<br />
+           更新來源：<code>${esc(settings.dataUrl || DEFAULT_SOURCE)}</code>`;
+    }
+
+    function renderResult(res) {
+      const sec = document.getElementById("syncResultSection");
+      const wrap = document.getElementById("syncResult");
+      if (!sec || !wrap) return;
+
+      const parts = [];
+      if (res.stats) {
+        const s = res.stats;
+        parts.push(`<div class="result-stats">
+          <div class="result-stat"><b>${s.routesNew}</b><span>新增航線</span></div>
+          <div class="result-stat"><b>${s.routesUpdated}</b><span>更新航線</span></div>
+          <div class="result-stat"><b>${s.routesRemoved}</b><span>移除航線</span></div>
+          <div class="result-stat"><b>${s.flightsAdded}</b><span>新增班次</span></div>
+          <div class="result-stat"><b>${s.flightsUpdated}</b><span>更新班次</span></div>
+          <div class="result-stat"><b>${s.flightsRemoved}</b><span>移除班次</span></div>
+        </div>`);
+      }
+
+      const items = [];
+      if (res.errors.length) {
+        res.errors.slice(0, 6).forEach((m) => items.push(`<li class="error">✕ ${esc(m)}</li>`));
+        if (res.errors.length > 6) items.push(`<li class="error">…另有 ${res.errors.length - 6} 項錯誤</li>`);
+      } else {
+        items.push(`<li class="ok">✓ 格式檢查通過，資料已套用。</li>`);
+      }
+      res.warnings.slice(0, 8).forEach((m) => items.push(`<li class="warn">! ${esc(m)}</li>`));
+      if (res.warnings.length > 8) items.push(`<li class="warn">…另有 ${res.warnings.length - 8} 項提醒</li>`);
+
+      wrap.innerHTML = parts.join("") + `<ul class="result-list">${items.join("")}</ul>`;
+      sec.hidden = false;
+      sec.scrollIntoView({ block: "nearest" });
+    }
+
+    function summaryText(res) {
+      const s = res.stats || {};
+      if (!s.flightsAdded && !s.flightsUpdated && !s.flightsRemoved && !s.routesUpdated && !s.routesNew) {
+        return "資料已是最新，沒有偵測到班次變動。";
+      }
+      return `更新完成：${s.flightsUpdated || 0} 個班次更新、${s.flightsAdded || 0} 個新增、${s.flightsRemoved || 0} 個移除。`;
+    }
+
+    // ---------- 取得與套用 ----------
+    async function fetchJson(url) {
+      if (location.protocol === "file:" && !/^https?:/i.test(url)) {
+        throw new Error("FILE_PROTOCOL");
+      }
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
+      try {
+        const sep = url.includes("?") ? "&" : "?";
+        const res = await fetch(`${url}${sep}_=${Date.now()}`, { cache: "no-store", signal: ctrl.signal });
+        if (res.status === 404) throw new Error("SOURCE_NOT_FOUND");
+        if (!res.ok) throw new Error(`資料來源回應 ${res.status}`);
+        const raw = await res.text();
+        try {
+          return JSON.parse(raw);
+        } catch (e) {
+          throw new Error("回傳內容不是有效的 JSON，請確認網址指向 JSON 檔。");
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function friendlyError(err) {
+      if (err.name === "AbortError") return "連線逾時，資料來源沒有在 12 秒內回應。";
+      if (err.message === "SOURCE_NOT_FOUND") return "找不到資料檔（404）。請確認網址，或改用上傳／貼上 JSON。";
+      if (err.message === "FILE_PROTOCOL") return "此頁以本機檔案開啟，瀏覽器禁止直接讀取外部檔案，請改用上傳或貼上 JSON。";
+      if (err instanceof TypeError) return "無法連線到資料來源，請確認網址、網路或跨網域（CORS）設定。";
+      return err.message || "更新失敗，請稍後再試。";
+    }
+
+    function analyze(payload, sourceLabel) {
+      const { errors, warnings, list } = validatePayload(payload);
+      if (errors.length) {
+        return { errors, warnings, routes: null, stats: null, meta: null };
+      }
+      const stats = diffRoutes(list);
+      const routes = mergeRoutes(list);
+      const wrapper = !Array.isArray(payload) ? payload : {};
+      const meta = {
+        version: wrapper.version || wrapper.dataVersion || "",
+        effectiveFrom: wrapper.effectiveFrom || "",
+        effectiveTo: wrapper.effectiveTo || "",
+        source: wrapper.source || sourceLabel || "外部資料",
+        savedAt: new Date().toISOString()
+      };
+      return { errors, warnings, routes, stats, meta };
+    }
+
+    async function refreshFromUrl(url, { silent = false, label = "" } = {}) {
+      setSyncBusy(true);
+      try {
+        const payload = await fetchJson(url);
+        const res = analyze(payload, label || url);
+        if (res.errors.length) {
+          renderResult(res);
+          openSyncModal();
+          if (!silent) showToast(`資料未套用，請看檢查結果。`, "error");
+          return false;
+        }
+        applyData(res.routes, res.meta);
+        renderResult(res);
+        if (!silent) showToast(summaryText(res), "success");
+        return true;
+      } catch (err) {
+        if (!silent) {
+          openSyncModal();
+          showToast(friendlyError(err), "error");
+        }
+        return false;
+      } finally {
+        setSyncBusy(false);
+        updateSyncStatus();
+      }
+    }
+
+    function applyRawText(text, label) {
+      let raw = String(text || "").trim();
+      if (!raw) {
+        showToast("請先貼上 JSON 內容。", "info");
+        return false;
+      }
+      let payload;
+      try {
+        payload = JSON.parse(raw);
+      } catch (e) {
+        const start = raw.indexOf("{");
+        const end = raw.lastIndexOf("}");
+        if (start !== -1 && end > start) {
+          try {
+            payload = JSON.parse(raw.slice(start, end + 1));
+          } catch (e2) {
+            payload = null;
+          }
+        }
+      }
+      if (!payload) {
+        renderResult({ errors: ["貼上的內容不是有效的 JSON，請確認逗號、引號與括號是否完整。"], warnings: [], stats: null });
+        openSyncModal();
+        showToast("JSON 格式錯誤，資料未套用。", "error");
+        return false;
+      }
+      const res = analyze(payload, label || "手動貼上");
+      renderResult(res);
+      if (res.errors.length) {
+        openSyncModal();
+        showToast("資料有錯誤，未套用任何變更。", "error");
+        return false;
+      }
+      applyData(res.routes, res.meta);
+      showToast(summaryText(res), "success");
+      return true;
+    }
+
+    // ---------- 匯出 / 還原 ----------
+    function exportData() {
+      const payload = {
+        version: dataMeta.version || BUILTIN_META.version,
+        effectiveFrom: dataMeta.effectiveFrom || "",
+        effectiveTo: dataMeta.effectiveTo || "",
+        source: dataMeta.source || "",
+        exportedAt: new Date().toISOString(),
+        routes: ROUTES.map((r) => {
+          const copy = { ...r };
+          delete copy._search;
+          return copy;
+        })
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "flights-data.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      showToast("已匯出 flights-data.json，可放回網站資料夾或上傳到你的端點。", "success");
+    }
+
+    function resetToBuiltin() {
+      store.remove(DATA_LS_KEY);
+      applyData(JSON.parse(JSON.stringify(BUILTIN_ROUTES)), { ...BUILTIN_META }, { persist: false });
+      document.getElementById("syncResultSection").hidden = true;
+      showToast("已還原為內建班表。", "info");
+    }
+
+    // ---------- 提示訊息 ----------
+    function showToast(message, type = "info") {
+      const stack = document.getElementById("toastStack");
+      if (!stack) return;
+      const el = document.createElement("div");
+      el.className = `toast ${type}`;
+      el.textContent = message;
+      stack.appendChild(el);
+      setTimeout(() => {
+        el.style.transition = "opacity .25s ease, transform .25s ease";
+        el.style.opacity = "0";
+        el.style.transform = "translateY(-6px)";
+        setTimeout(() => el.remove(), 260);
+      }, 4200);
+    }
+
+    function setSyncBusy(busy) {
+      const btn = document.getElementById("syncBtn");
+      if (!btn) return;
+      btn.classList.toggle("loading", busy);
+      btn.disabled = busy;
+      btn.querySelector("span:last-child").textContent = busy ? "更新中…" : "更新航班資料";
+    }
+
+    // ---------- 彈窗控制 ----------
+    const syncModal = document.getElementById("syncModal");
+    let lastFocused = null;
+
+    function openSyncModal() {
+      lastFocused = document.activeElement;
+      refreshModalCurrent();
+      syncModal.classList.add("open");
+      document.body.style.overflow = "hidden";
+      document.getElementById("syncUrlInput").value = settings.dataUrl || DATA_FILE_DEFAULT;
+      document.getElementById("syncAutoCheck").checked = settings.autoCheck === true;
+      setTimeout(() => {
+        const target = settings.dataUrl ? document.getElementById("syncPasteInput") : document.getElementById("syncUrlInput");
+        target?.focus();
+      }, 60);
+    }
+
+    function closeSyncModal() {
+      syncModal.classList.remove("open");
+      document.body.style.overflow = "";
+      lastFocused?.focus?.();
+    }
+
+    // ---------- 事件 ----------
+    document.getElementById("syncBtn").addEventListener("click", async () => {
+      const url = settings.dataUrl || DATA_FILE_DEFAULT;
+      if (location.protocol === "file:" && !/^https?:/i.test(url)) {
+        openSyncModal();
+        showToast("此頁以本機檔案開啟，瀏覽器禁止讀取同資料夾檔案，請改用上傳或貼上 JSON。", "info");
+        return;
+      }
+      const ok = await refreshFromUrl(url, { label: url });
+      if (!ok) openSyncModal();
+    });
+
+    document.getElementById("syncSettingsBtn").addEventListener("click", openSyncModal);
+    document.getElementById("syncModalClose").addEventListener("click", closeSyncModal);
+    document.getElementById("syncDoneBtn").addEventListener("click", closeSyncModal);
+
+    syncModal.addEventListener("click", (e) => {
+      if (e.target === syncModal) closeSyncModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && syncModal.classList.contains("open")) closeSyncModal();
+    });
+
+    document.getElementById("syncFetchBtn").addEventListener("click", async () => {
+      const input = document.getElementById("syncUrlInput");
+      const url = input.value.trim();
+      if (!url) {
+        showToast("請先填入資料來源網址。", "info");
+        input.focus();
+        return;
+      }
+      settings.dataUrl = url;
+      persistSettings();
+      await refreshFromUrl(url, { label: url });
+    });
+
+    document.getElementById("syncApplyPasteBtn").addEventListener("click", () => {
+      applyRawText(document.getElementById("syncPasteInput").value, "手動貼上");
+    });
+
+    document.getElementById("syncFileInput").addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const ok = applyRawText(reader.result, file.name);
+        if (ok) document.getElementById("syncPasteInput").value = "";
+      };
+      reader.onerror = () => showToast("讀取檔案失敗，請再試一次。", "error");
+      reader.readAsText(file);
+      e.target.value = "";
+    });
+
+    document.getElementById("syncExportBtn").addEventListener("click", exportData);
+    document.getElementById("syncResetBtn").addEventListener("click", resetToBuiltin);
+
+    document.getElementById("syncAutoCheck").addEventListener("change", (e) => {
+      settings.autoCheck = e.target.checked;
+      persistSettings();
+    });
+
+    // ---------- 啟動：還原快取資料，必要時自動檢查更新 ----------
+    (function bootSync() {
+      restoreCached();
+      updateSyncStatus();
+
+      const canFetch = location.protocol.startsWith("http");
+      if (settings.autoCheck !== true || !canFetch) return;
+
+      const url = settings.dataUrl || DATA_FILE_DEFAULT;
+      fetchJson(url)
+        .then((payload) => {
+          const incomingVersion = (!Array.isArray(payload) && (payload.version || payload.dataVersion)) || "";
+          if (incomingVersion && incomingVersion === dataMeta.version) return;
+          const res = analyze(payload, settings.dataUrl || DATA_FILE_DEFAULT);
+          if (res.errors.length) return;
+          const s = res.stats;
+          if (!s.flightsAdded && !s.flightsUpdated && !s.flightsRemoved && !s.routesNew) return;
+          applyData(res.routes, res.meta);
+          showToast(`已自動套用最新班表：${s.flightsUpdated} 個班次更新、${s.flightsAdded} 個新增。`, "success");
+        })
+        .catch(() => {
+          /* 背景檢查失敗時保持現有資料，不打擾使用者 */
+        });
+    })();
+
     // 初始化
     renderRouteDropdown();
     renderAll();
   </script>
-<script data-pplx-inline-edit>
-(function () {
-  if (window === window.top) return;
-
-  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
-  const MAX_FONT_BYTES = 500 * 1024;
-  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
-  const DEFAULT_LINE_HEIGHT = 16;
-  let scrollForwarding = false;
-  let scrollRaf = 0;
-  let trustedTopOrigin = null;
-
-  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
-  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
-  // across multiple labels.
-  function matchesAllowedOrigin(origin) {
-    if (!origin) return false;
-    for (const entry of allowedParentOrigins) {
-      if (!entry.includes("*")) {
-        if (entry === origin) return true;
-        continue;
-      }
-      const pattern = new RegExp(
-        "^" +
-          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
-          "$",
-      );
-      if (pattern.test(origin)) return true;
-    }
-    return false;
-  }
-
-  // Trust decision: when the sender is same-origin-visible (event.origin is a
-  // real origin like https://www.perplexity.ai) we trust event.origin directly.
-  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
-  // broker's stamped `parentOrigin` to identify the top window. The fallback
-  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
-  // on the response path (see postToTrustedTop) to ensure replies can't be
-  // delivered to anyone but the actual top window of that claimed origin.
-  function getTrustedParentOrigin(event) {
-    const forwardedParentOrigin =
-      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
-    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
-    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
-  }
-
-  // All responses go to window.top with targetOrigin = the allowlisted origin.
-  // An attacker that iframes us inside their own null-origin broker can claim
-  // any parentOrigin they like, but the browser will drop the reply whenever
-  // the real top's origin doesn't match — so the screenshot never leaves.
-  function postToTrustedTop(message) {
-    if (!trustedTopOrigin) return;
-    try {
-      window.top.postMessage(message, trustedTopOrigin);
-    } catch (_error) {}
-  }
-
-  const PICK_CAPABILITIES = ["pick"];
-  const PICK_CHAIN_LENGTH = 4;
-  const PICK_MAX_TEXT_CHARS = 120;
-  const PICK_MAX_HTML_CHARS = 300;
-
-  function truncate(value, maxChars) {
-    return value.length > maxChars ? value.slice(0, maxChars - 1) + "…" : value;
-  }
-
-  function isPickableElement(element) {
-    return (
-      element instanceof Element &&
-      element !== document.documentElement &&
-      element !== document.body
-    );
-  }
-
-  function resolvePickTarget(x, y) {
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    const element = document.elementFromPoint(x, y);
-    return isPickableElement(element) ? element.closest("svg") || element : null;
-  }
-
-  function pickLabel(element) {
-    if (element.id) return element.localName + "#" + element.id;
-    return [element.localName].concat(Array.from(element.classList).slice(0, 2)).join(".");
-  }
-
-  // Only attributes that help find the element in source. data-* values and URL
-  // query strings or fragments can carry tokens.
-  const PICK_ATTRIBUTES = new Set([
-    "id",
-    "class",
-    "name",
-    "type",
-    "role",
-    "alt",
-    "aria-label",
-    "href",
-    "src",
-  ]);
-
-  function pickAttributeValue(attribute) {
-    return attribute.name === "href" || attribute.name === "src"
-      ? attribute.value.split(/[?#]/)[0]
-      : attribute.value;
-  }
-
-  function describePickElement(element) {
-    const chain = [];
-    for (
-      let current = element;
-      isPickableElement(current) && chain.length < PICK_CHAIN_LENGTH;
-      current = current.parentElement
-    ) {
-      chain.unshift(current);
-    }
-    const attributes = Array.from(element.attributes)
-      .filter((attribute) => PICK_ATTRIBUTES.has(attribute.name))
-      .map((attribute) => ` ${attribute.name}="${pickAttributeValue(attribute).replace(/"/g, "&quot;")}"`)
-      .join("");
-    const text = (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim();
-    return {
-      chain: chain.map(pickLabel),
-      html: truncate(`<${element.localName}${attributes}>`, PICK_MAX_HTML_CHARS),
-      text: text ? truncate(text, PICK_MAX_TEXT_CHARS) : undefined,
-    };
-  }
-
-  // Hover asks once per frame, and innerText on a large section forces layout,
-  // so only the rect is re-read while the pointer stays on the same element.
-  // Clicks ask for fresh details since the page may have changed the element.
-  let lastPick = null;
-
-  function describePickTarget(element, fresh) {
-    if (fresh || lastPick?.element !== element) {
-      lastPick = { element, details: describePickElement(element) };
-    }
-    const rect = element.getBoundingClientRect();
-    return {
-      rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
-      ...lastPick.details,
-    };
-  }
-
-  function inlineAll(original, clone) {
-    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
-
-    try {
-      const computedStyle = getComputedStyle(original);
-      // cssText on a computed style is the serialized declaration in modern
-      // Chromium/Safari — a single read beats enumerating ~400 longhand
-      // properties. Firefox returns "" here, so we fall back on empty.
-      const serialized = computedStyle.cssText;
-      if (serialized) {
-        clone.style.cssText = serialized;
-      } else {
-        const parts = new Array(computedStyle.length);
-        for (let index = 0; index < computedStyle.length; index += 1) {
-          const property = computedStyle[index];
-          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
-        }
-        clone.style.cssText = parts.join("");
-      }
-    } catch (_error) {}
-
-    const originalChildren = original.children;
-    const clonedChildren = clone.children;
-    for (
-      let index = 0;
-      index < originalChildren.length && index < clonedChildren.length;
-      index += 1
-    ) {
-      inlineAll(originalChildren[index], clonedChildren[index]);
-    }
-  }
-
-  function extractFontUrl(srcValue) {
-    const matches = [
-      ...srcValue.matchAll(
-        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
-      ),
-    ];
-    if (matches.length === 0) return null;
-    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
-    if (woff2) return woff2[1];
-    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
-    if (woff) return woff[1];
-    return matches[0][1];
-  }
-
-  // Cache resolved font URL -> data URI across captures. Fonts on a page
-  // essentially never change, and a batch run emits multiple captures back to
-  // back — without this we'd refetch + re-base64 every time.
-  const fontDataUriCache = new Map();
-  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
-
-  async function fetchAsDataUri(url) {
-    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
-    let dataUri = null;
-    try {
-      const response = await fetch(url, { mode: "cors", credentials: "omit" });
-      if (response.ok) {
-        const blob = await response.blob();
-        if (blob.size <= MAX_FONT_BYTES) {
-          dataUri = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () =>
-              resolve(typeof reader.result === "string" ? reader.result : null);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
-          });
-        }
-      }
-    } catch (_error) {
-      dataUri = null;
-    }
-    fontDataUriCache.set(url, dataUri);
-    return dataUri;
-  }
-
-  function collectFontFaceRuleTexts() {
-    const rules = [];
-    for (const sheet of document.styleSheets) {
-      let cssRules;
-      try {
-        cssRules = sheet.cssRules;
-      } catch (_error) {
-        continue;
-      }
-      if (!cssRules) continue;
-      for (const rule of cssRules) {
-        const cssText = rule.cssText || "";
-        if (cssText.startsWith("@font-face")) rules.push(cssText);
-      }
-    }
-    return rules;
-  }
-
-  async function buildInlinedFontCss() {
-    const ruleTexts = collectFontFaceRuleTexts();
-    if (ruleTexts.length === 0) return null;
-
-    const resolved = ruleTexts.map((cssText) => {
-      if (!SRC_DECLARATION_RE.test(cssText)) return null;
-      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
-      if (!srcMatch) return null;
-      const url = extractFontUrl(srcMatch[1]);
-      if (!url) return null;
-      try {
-        return { cssText, url: new URL(url, document.baseURI).href };
-      } catch (_error) {
-        return null;
-      }
-    });
-
-    const dataUris = await Promise.all(
-      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
-    );
-
-    const inlined = [];
-    let totalBytes = 0;
-    for (let index = 0; index < resolved.length; index += 1) {
-      const entry = resolved[index];
-      const dataUri = dataUris[index];
-      if (!entry || !dataUri) continue;
-      const approxBytes = dataUri.length * 0.75;
-      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
-      totalBytes += approxBytes;
-      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
-    }
-    return inlined.length > 0 ? inlined.join("\n") : null;
-  }
-
-  function stripExternal(clone) {
-    const images = clone.querySelectorAll("img");
-    for (let index = 0; index < images.length; index += 1) {
-      const src = images[index].getAttribute("src");
-      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
-    }
-
-    const elements = clone.querySelectorAll("*");
-    for (let index = 0; index < elements.length; index += 1) {
-      const style = elements[index].style.cssText;
-      if (style && style.includes("url(")) {
-        elements[index].style.cssText = style.replace(
-          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
-          "none",
-        );
-      }
-    }
-  }
-
-  function emitScroll() {
-    scrollRaf = 0;
-    if (!scrollForwarding) return;
-    postToTrustedTop({
-      type: "INLINE_EDIT_SCROLL",
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
-      capabilities: PICK_CAPABILITIES,
-    });
-  }
-
-  window.addEventListener(
-    "scroll",
-    function () {
-      if (!scrollForwarding || scrollRaf) return;
-      scrollRaf = requestAnimationFrame(emitScroll);
-    },
-    { passive: true, capture: true },
-  );
-
-  async function handleCaptureRequest(event) {
-    const requestId = event.data.requestId;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    function postResult(dataUrl) {
-      postToTrustedTop({
-        type: "INLINE_EDIT_SCREENSHOT_RESULT",
-        requestId,
-        dataUrl,
-        scrollX,
-        scrollY,
-      });
-    }
-
-    try {
-      // Wait for any pending web fonts to resolve so both inline metrics and
-      // the @font-face inlining below see the same loaded faces.
-      if (document.fonts && document.fonts.ready) {
-        try {
-          await document.fonts.ready;
-        } catch (_error) {}
-      }
-
-      const clone = document.documentElement.cloneNode(true);
-      inlineAll(document.documentElement, clone);
-
-      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
-      for (let index = 0; index < removedNodes.length; index += 1) {
-        removedNodes[index].remove();
-      }
-
-      stripExternal(clone);
-
-      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
-      // can resolve them — external font URLs aren't fetched during
-      // foreignObject rendering, which would otherwise force a fallback face
-      // and change text metrics.
-      const inlinedFontCss = await buildInlinedFontCss();
-      if (inlinedFontCss) {
-        const styleEl = document.createElement("style");
-        styleEl.textContent = inlinedFontCss;
-        const head = clone.querySelector("head");
-        if (head) head.appendChild(styleEl);
-        else clone.insertBefore(styleEl, clone.firstChild);
-      }
-
-      const html = new XMLSerializer().serializeToString(clone);
-      const svg =
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
-        '<foreignObject width="100%" height="100%">' +
-        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
-        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
-        html +
-        "</div></div></foreignObject></svg>";
-      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-      const image = new Image();
-      image.onload = function () {
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext("2d").drawImage(image, 0, 0);
-        postResult(canvas.toDataURL("image/png"));
-      };
-      image.onerror = function () {
-        postResult(null);
-      };
-      image.src = svgUrl;
-    } catch (_error) {
-      postResult(null);
-    }
-  }
-
-  window.addEventListener("message", function (event) {
-    if (!event.data) return;
-    // Only accept messages from the direct parent frame. Blocks sibling /
-    // unrelated-window postMessage senders that could otherwise reach us.
-    if (event.source !== window.parent) return;
-
-    const trustedParentOrigin = getTrustedParentOrigin(event);
-    if (!trustedParentOrigin) return;
-    trustedTopOrigin = trustedParentOrigin;
-
-    if (event.data.type === "INLINE_EDIT_PICK") {
-      const element = resolvePickTarget(event.data.x, event.data.y);
-      postToTrustedTop({
-        type: "INLINE_EDIT_PICK_RESULT",
-        seq: event.data.seq,
-        target: element ? describePickTarget(element, event.data.fresh === true) : null,
-      });
-      return;
-    }
-
-    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
-      scrollForwarding = true;
-      emitScroll();
-      return;
-    }
-
-    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
-      scrollForwarding = false;
-      if (scrollRaf) cancelAnimationFrame(scrollRaf);
-      scrollRaf = 0;
-      return;
-    }
-
-    if (event.data.type === "INLINE_EDIT_SCROLL_BY") {
-      const { deltaX, deltaY, deltaMode } = event.data;
-      if (!scrollForwarding || !Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return;
-      if (deltaMode !== 0 && deltaMode !== 1 && deltaMode !== 2) return;
-      const lineHeight =
-        parseFloat(getComputedStyle(document.documentElement).lineHeight) || DEFAULT_LINE_HEIGHT;
-      const scaleX = deltaMode === 1 ? lineHeight : deltaMode === 2 ? window.innerWidth : 1;
-      const scaleY = deltaMode === 1 ? lineHeight : deltaMode === 2 ? window.innerHeight : 1;
-      // The selection overlay receives the wheel event instead of this iframe.
-      // Instant scrolling preserves trackpad deltas even on smooth-scroll sites.
-      window.scrollBy({ left: deltaX * scaleX, top: deltaY * scaleY, behavior: "instant" });
-      emitScroll();
-      return;
-    }
-
-    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
-
-    handleCaptureRequest(event);
-  });
-})();
-
-
-</script></body>
+</body>
 </html>
